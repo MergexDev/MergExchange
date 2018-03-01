@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MergeExchange</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"> 
+    <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    <script src="include/d3.v4.min.js"></script>
+    <script src="include/techan.min.js"></script>
+    <link href="css/reset.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="include/jquery.mCustomScrollbar.min.css" />
+    <link href="css/layout.css" rel="stylesheet" type="text/css">
+    <link href="css/chart.css" rel="stylesheet" type="text/css">
+    <link href="css/popup.css" rel="stylesheet" type="text/css">
+    <link href="css/slider.css" rel="stylesheet" type="text/css">
+    <link href="css/tables.css" rel="stylesheet" type="text/css">
+    <script src="include/BigInteger.js"></script>
+    <script src="include/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="javascript/setup.js"></script>
+    <script src="javascript/popup.js"></script>
+    <script src="javascript/javascript.js"></script>
+    <script src="javascript/contract.js"></script>
+    <script src="javascript/loading.js"></script>
+</head>
+<body>
+    <div class="screenshade"></div>
+    <div class="popup"></div>
+    <div class="wrapper">
+        <div class="menu">
+            <img src="logo_3.png" height="100%" width="auto"></img>
+            <div class="account_data"></div>
+        </div>
+        <div class="graphbox">
+            <div class="graph"></div>
+            <div class="orders">
+                <div class="ordertable">
+                    <div class="ordershead">
+                        <table>
+                            <col width='24%'>
+                            <col width='10%'>
+                            <col width='18%'>
+                            <col width='18%'>
+                            <col width='18%'>
+                            <col width='12%'>
+                            <tr>
+                                <th>CREATED</th>
+                                <th>TYPE</th>
+                                <th>PRICE</th>
+                                <th>AMOUNT</th>
+                                <th>FILLED</th>
+                                <th>CANCEL</th>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="orderscontent">
+                        <table id="orders_data"></table>
+                    </div>
+                </div>
+                <div class="orderstatus"></div>
+            </div>
+        </div>
+        <div class="orderbox">
+            <div class="sells">
+                <div class="sellshead">
+                    <table>
+                        <tr>
+                            <th class='hprice'>ASK</th>
+                            <th class='amount'>AMOUNT</th>
+                            <th class='value'>VALUE</th>
+                        </tr>
+                    </table>
+                </div>
+                <div class="sellscontent">
+                    <table id="sells_data"></table>
+                </div>
+            </div>
+            <div class="buys">
+                <div class="buyshead">
+                    <table>
+                        <tr>
+                            <th class='hprice'>BID</th>
+                            <th class='amount'>AMOUNT</th>
+                            <th class='value'>VALUE</th>
+                        </tr>
+                    </table>
+                </div>
+                <div class="buyscontent">
+                    <table id="buys_data"></table>
+                </div>
+            </div>
+            <div class="place">
+            </div>
+        </div>
+        <div class="tradedata">
+            <div class="markets">
+                <div class="marketshead">
+                    <table>
+                        <tr>
+                            <th>MARKET</th>
+                            <th>VOLUME</th>
+                            <th>PRICE</th>
+                        </tr>
+                    </table>
+                </div>
+                <div class="marketscontent">
+                    <table id="markets_data"></table>
+                </div>
+            </div>
+            <div class="history">
+                <div class="historyhead">
+                    <table>
+                        <tr>
+                            <th colspan=3>RECENT TRADES</th>
+                        </tr>
+                    </table>
+                </div>
+                <div class="historycontent">
+                    <table id="history_data"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

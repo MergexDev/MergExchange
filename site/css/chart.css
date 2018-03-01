@@ -1,0 +1,52 @@
+svg{
+    font: 10px sans-serif;
+}
+
+.axis path,.axis line {
+    fill: none;
+    stroke: #ffffff;
+    shape-rendering: crispEdges;
+}
+
+text {
+    fill: #ffffff;
+}
+
+path.candle.body {
+    stroke-width: 0;
+}
+
+path.volume {
+    fill: #7f7f7f;
+}
+
+.crosshair {
+    cursor: crosshair;
+}
+
+.crosshair path.wire {
+    stroke: #ffffff;
+    stroke-dasharray: 1, 2;
+}
+
+rect.pane {
+    cursor: move;
+    fill: none;
+    pointer-events: all;
+}
+.areaBid{
+    stroke-width:1.5px;
+}
+.areaAsk{
+    stroke-width:1.5px;
+}
+.statustextleft{
+    text-anchor: start;
+    font-size:12px;
+    font-weight:bold;
+}
+.statustextright{
+    text-anchor: end;
+    font-size:12px;
+    font-weight:bold;
+}

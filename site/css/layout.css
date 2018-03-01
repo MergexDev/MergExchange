@@ -1,0 +1,246 @@
+* {
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+}
+@font-face {
+    font-family:Roboto;
+    src: url(../fonts/Roboto-Regular.ttf);
+}
+@font-face {
+    font-family:OpenSans;
+    src: url(../fonts/OpenSans-Regular.ttf);
+}
+body{
+	font: 12px sans-serif;
+}
+.wrapper{
+	position: absolute;
+	width: 100%;
+	height: 100%;
+}
+.menu,.orderbox,.graphbox,.tradedata{
+	background-color: #a1a1a1;
+	float:left;
+	position:absolute;
+}
+.menu{
+	background-color:#f0f0eb;
+	border-bottom:4px solid #1a1a1f;
+	height:70px;
+	width:100%;
+}
+.orderbox{
+	top:70px;
+	width:300px;
+	height:calc(100% - 70px);
+}
+.graphbox{
+	left:300px;
+	top:70px;
+	width:calc(100% - 600px);
+	height:calc(100% - 70px);
+}
+.tradedata{
+	top:70px;
+	right:0px;
+	width:300px;
+	height:calc(100% - 70px);
+}
+.graph,.orders,.sells,.buys,.place,.markets,.history{
+	float:left;
+	position:relative;
+	background-color: #777777;
+	border:solid 5px #a1a1a1;
+}
+.graph{
+	width:100%;
+	height:calc(100% - 300px);
+	border: 0px;
+	background-color: #444448;
+}
+.orders{
+	display:inline;
+	width:100%;
+	height:300px;
+	border:0px;
+	background-color:#28282b;
+}
+.ordertable{
+	float:left;
+	width:calc(100% - 360px);
+	height:100%;
+}
+.orderstatus{
+	float:left;
+	overflow:hidden;
+	width:360px;
+	height:100%;
+}
+.place{
+	width:100%;
+	height:250px;
+	border:0px;
+	background-color:#323235;
+}
+.sells,.buys{
+	width:100%;
+	height:calc(50% - 125px);
+	border: 0px;
+	background-color: #323235;
+}
+.markets, .history{
+	border: 0px;
+	background-color: #323235;
+}
+.otitle{
+	width:100%;
+	height:35px;
+	line-height:35px;
+	font-size:20px;
+	color:#55bfff;
+	text-align:center;
+}
+hr{
+	margin:0px;
+	margin-left:30%;
+	border-top: 1px solid #55bfff;
+	width:40%;
+}
+.markets,.history{
+	width:100%;
+	height:50%;
+}
+.account_data{
+	position: relative;
+	float: right;
+	font-weight: bold;
+	font-size: 13px;
+	text-align: right;
+	height: 66px;
+	line-height: 66px;
+}
+pf{
+	position: relative;
+	margin-right: 10px;
+	padding: 4px 20px;
+	border-radius: 12px;
+	color: #ffffff;
+	cursor: pointer;
+	transition-duration: 0.3s;
+	-webkit-transition-duration: 0.3s;
+	-moz-transition-duration: 0.3s;
+	-o-transition-duration: 0.3s;
+}
+#gasInfo{
+	padding: 4px 28px;
+}
+.gasSlider{
+	float: left;
+    display: none;
+    position: absolute;
+    opacity: 0;
+    z-index: 10;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    transition-duration: 0.3s;
+	-webkit-transition-duration: 0.3s;
+	-moz-transition-duration: 0.3s;
+	-o-transition-duration: 0.3s;
+}
+pf:hover .gasSlider{
+    display: block;
+    opacity: 1;
+}
+@media only screen and (max-width: 1200px){
+	.orderbox{
+		width:240px;
+	}
+	.tradedata{
+		width:240px;
+	}
+	.graphbox{
+		left:240px;
+		width:calc(100% - 480px);
+	}
+	.ordertable{
+		width:100%
+	}
+	.orderstatus{
+		display:none;
+	}
+}
+@media only screen and (max-height: 900px) and (min-width: 900px){
+	.graph{
+		width:100%;
+		height:calc(100% - 250px);
+	}
+	.orders{
+		width:100%;
+		height:250px;
+	}
+}
+@media only screen and (max-height: 720px) and (min-width: 900px){
+	.graph{
+		width:100%;
+		height:calc(100% - 200px);
+	}
+	.orders{
+		width:100%;
+		height:200px;
+	}
+}
+@media only screen and (max-width: 900px){
+	.wrapper{
+		position: relative;
+		display: inline;
+	}
+	.graphbox,.orderbox,.tradedata{
+		width:100%;
+		height:100%;
+		left:0px;
+		top:0px;
+	}
+	.graph{
+		width:100%;
+		height:400px;
+	}
+	.orders{
+		width:100%;
+		height:300px;
+	}
+	.sells,.buys{
+		width:50%;
+		height:280px;
+	}
+	.markets,.history{
+		width:50%;
+		height:400px;
+	}
+	.menu,.orderbox,.graphbox,.tradedata{
+		position: relative;
+	}
+}
+@media only screen and (max-width: 500px){
+	.graph{
+		width:100%;
+		height:280px;
+	}
+	.orders{
+		width:100%;
+		height:300px;
+	}
+	.sells,.buys{
+		width:100%;
+		height:280px;
+	}
+	.markets,.history{
+		width:100%;
+		height:400px;
+	}
+	.menu,.orderbox,.graphbox,.tradedata{
+		position: relative;
+	}
+}

@@ -1,0 +1,178 @@
+.mCS-dark.mCSB_scrollTools .mCSB_dragger .mCSB_dragger_bar{ background-color: rgba(0,0,0,0.4); }
+.mCS-dark.mCSB_scrollTools .mCSB_dragger:hover .mCSB_dragger_bar{ background-color: rgba(0,0,0,0.8); }
+.mCSB_inside > .mCSB_container{
+	margin-right: 4px;
+}
+.sells table,.buys table,.markets table,.history table,.ordertable table{
+	width:calc(100% - 8px);
+	margin:0px 4px;
+	color:#ffffff;
+	table-layout:fixed;
+}
+.sells th,.buys th,.markets th, .history th,.ordertable th,.placetitle,.infotitle{
+	font-weight:bold;
+	background-color:#1a1a1f;
+	color:#ffffff;
+	height:25px;
+	line-height:25px;
+}
+.sellshead table,.buyshead table,.marketshead table,.historyhead table,.ordershead table{
+	width:calc(100% - 8px);
+	height:25px;
+	margin:6px 4px;
+}
+.sellscontent,.buyscontent,.marketscontent,.historycontent,.orderscontent{
+	width:100%;
+	height:calc(100% - 37px);
+	overflow:hidden;
+}
+.sellscontent tr, .buyscontent tr, .price, .marketscontent tr, .historycontent tr{
+	transition-duration: 0.25s;
+	-webkit-transition-duration: 0.25s;
+	-moz-transition-duration: 0.25s;
+	-o-transition-duration: 0.25s;
+}
+.sellscontent tr:hover,.buyscontent tr:hover, .marketscontent tr:hover, .historycontent tr:hover{
+	cursor:pointer;
+}
+.sellscontent tr:hover .price,.buyscontent tr:hover .price{
+	color:#ffffff;
+}
+.sells .price,.sprice{
+	width:30%;
+	font-weight:bold;
+}
+.buys .price,.bprice{
+	width:30%;
+	font-weight:bold;
+}
+.buyclr{
+	font-weight:bold;
+}
+.sellclr{
+	font-weight:bold;
+}
+.sells .amount,.buys .amount{
+	width:40%;
+}
+.sells .value,.buys .value,.history .value,.hprice,.history .recent{
+	width:30%;
+}
+.history .recent{
+	font-weight:bold;
+}
+.sells td,.buys td,.markets td,.history td,.ordertable td{
+	text-align:center;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}
+.placetitle{
+	float:left;
+	text-align:center;
+	margin:4px;
+	margin-bottom:7px;
+	width:calc(100% - 8px);
+	border:0px;
+}
+.infotitle{
+	float:left;
+	text-align:center;
+	margin: 6px 4px;
+	margin-bottom:0px;
+	width:calc(100% - 8px);
+	border:0px;
+}
+.infoline{
+	float:left;
+	text-align:left;
+	margin: 10px 15px;
+	padding: 0px 8px;
+	margin-bottom:0px;
+	width:calc(100% - 30px);
+	border:0px;
+	font-weight:bold;
+	background-color:#38383d;
+	color:#ffffff;
+	height:25px;
+	line-height:25px;
+}
+.infoline right{
+	float:right;
+	text-align:right;
+}
+.tradeview{
+	margin:0px 4px;
+	width:calc(100% - 8px);
+}
+.tradeview input[type=text]{
+	border:0px;
+	margin:0px 25px;
+	width:calc(100% - 60px);
+	background-color:#55555a;
+	padding:0px 4px;
+	height:25px;
+	line-height:25px;
+	color:#ffffff;
+}
+.tradeview htx{
+	float:left;
+	position:relative;
+	margin-left:25px;
+	margin-top:10px;
+	line-height:20px;
+	font-size:12px;
+	color:#ffffff;
+}
+.tradeview btn{
+	float:left;
+	position:relative;
+	width:calc(100% - 60px);
+	background-color:#1a1a1f;
+	text-align:center;
+	margin:0px 25px;
+	margin-top:25px;
+	height:25px;
+	line-height:25px;
+	color:#ffffff;
+	font-weight:bold;
+}
+.tradeview .switch{
+	float:left;
+	width:33%;
+	background-color:#2a2a2f;
+	margin-bottom:4px;
+	height:25px;
+	line-height:25px;
+	font-weight:bold;
+	text-align:center;
+	color:#ffffff;
+	cursor:pointer;
+}
+.tradeview .current{
+	width:34%;
+	color:#000000;
+	background-color:#ffffff;
+}
+ccl{
+	border-radius:8px;
+	padding:0px 16px;
+	background-color:#55555a;
+	color:#ffffff;
+	font-weight:bold;
+	cursor:pointer;
+	transition-duration: 0.2s;
+	-webkit-transition-duration: 0.2s;
+	-moz-transition-duration: 0.2s;
+	-o-transition-duration: 0.2s;
+}
+.marketscontent .current{
+	background-color: #45454f;
+	font-weight: bold;
+}
+.marketscontent tr:hover, .historycontent tr:hover{
+	background-color: #65656f;
+}
+.sellscontent tr, .buyscontent tr, .marketscontent tr, .historycontent tr, .orderscontent tr{
+	height:22px;
+	line-height: 22px; 
+}

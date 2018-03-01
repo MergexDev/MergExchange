@@ -1,0 +1,40 @@
+{
+	"markets":[
+		{
+			"ticker": "ETH/BTC",
+			"tokenA": "ETH",
+			"tokenB": "BTC"
+		},
+		{
+			"ticker": "ETH/LTC",
+			"tokenA": "ETH",
+			"tokenB": "LTC"
+		},
+		{
+			"ticker": "ETH/TTX",
+			"tokenA": "ETH",
+			"tokenB": "TTX"
+		},
+		{
+			"ticker": "BTC/ETH",
+			"tokenA": "BTC",
+			"tokenB": "ETH"
+		},
+		{
+			"ticker": "BTC/LTC",
+			"tokenA": "BTC",
+			"tokenB": "LTC"
+		},
+		{
+			"ticker": "BTC/TTX",
+			"tokenA": "BTC",
+			"tokenB": "TTX"
+		}
+	],
+	"tokens":{
+		"ETH": "0x6d0111daad51da88af8381694d9a728d3411ebf8",
+		"BTC": "0xc34a8eb1f192f9e2235e3b72c704b7eff6b5d5fc",
+		"LTC": "0x6a3668fe7d1a9db691302258f46614265bf29fb9",
+		"TTX": "0xe5d184e339b6abdda985957d31d76977a373cd6d"
+	}
+} 

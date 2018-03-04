@@ -24,7 +24,6 @@ function loadHistory(trades){
     $("#history_data").html(shtml);
 }
 
-//zavrsiti da radi !!!
 function renderOrders(address){
     console.log("started Render");
     var buyhtml="";
@@ -32,7 +31,6 @@ function renderOrders(address){
     var orderhtml="<colgroup><col width='24%'><col width='10%'><col width='18%'><col width='18%'><col width='18%'><col width='12%'></colgroup>";
     console.log(orders);
     for(i in orders){
-        console.log(orders[i].getFilled());
         if(orders[i].isBuyOrder()){
             buyhtml+="<tr onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
             if(orders[i].owner==address){
@@ -395,9 +393,8 @@ function loadScrolls(){
     });
 }
 function loadPriceStatus(){
-    var decimalBalanceA=removeDecimals(tokenA_balance,tokenA_decimals)
-    var decimalBalanceB=removeDecimals(tokenB_balance,tokenB_decimals)
-    
+    var decimalBalanceA=removeDecimals(tokenA_balance,tokenA_decimals);
+    var decimalBalanceB=removeDecimals(tokenB_balance,tokenB_decimals);
     var cont="<div class='infotitle'>INFO</div>";
     cont+="<div class='infoline'>"+tokenA_symbol+" balance:<right title='"+decimalBalanceA+"'>"+toDecimals(decimalBalanceA)+"</right></div>";
     cont+="<div class='infoline'>"+tokenB_symbol+" balance:<right title='"+decimalBalanceB+"'>"+toDecimals(decimalBalanceB)+"</right></div>";

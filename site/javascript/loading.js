@@ -73,7 +73,7 @@ function PhaseOneLoading(){
 		};
 		webSocket.onmessage = function(event) { 
 			var msg = event.data;
-			//console.log(msg);
+			console.log(msg);
 			jsonObj=JSON.parse(msg);
 			if(jsonObj["action"] == 'get_orders'){
 				parseOrders(jsonObj["data"]);

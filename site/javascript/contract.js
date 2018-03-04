@@ -41,17 +41,8 @@ class Order{
 		this.price = _price;
 		this.amount = _amount;
 	}
-	calculateBuyOrder(price){
+	setPrice(price){
 		this.price = removeDecimals(price, tokenA_decimals);
-		//this.price = removeDecimals(str_div(addDecimals(this.valueB,tokenA_decimals),this.valueA),tokenB_decimals);
-		this.amount = removeDecimals(this.valueA, tokenB_decimals);
-		this.value = removeDecimals(this.valueB, tokenA_decimals);
-	}
-	calculateSellOrder(price){
-		this.price = removeDecimals(price, tokenA_decimals);
-		//this.price = removeDecimals(str_div(addDecimals(this.valueA,tokenB_decimals),this.valueB),tokenA_decimals);
-		this.amount = removeDecimals(this.valueB, tokenB_decimals);
-		this.value = removeDecimals(this.valueA, tokenA_decimals);
 	}
 	setSignature(v,s,r){
 		this.signature = {};
@@ -112,7 +103,6 @@ class Order{
 		return false;
 	}
 	fillOrder(amount){
-		//console.log(isBiggerOrEqual('10000','10000'));
 		if(isFullLoaded()){
 			var orderA_contract;
 			var orderB_contract;
@@ -187,32 +177,44 @@ class Order{
 	}
 	setFilled(_filled){
 		if(this.tokenA==tokenA){
-			this.filled = removeDecimals(str_div(str_mul(_filled,this.valueB),this.valueA), tokenB_decimals);
+			this.filled = str_div(str_mul(_filled,this.valueB),this.valueA);
 		}else{
-			this.filled = removeDecimals(_filled, tokenB_decimals);
+			this.filled = _filled;
 		}
-		console.log(this.filled);
+	}
+	setOwnerAllowance(_allowance){
+		this.allowance=_allowance;
+	}
+	setOwnerBalance(_balance){
+		this.owner_balance=_balance;
 	}
 	getFilled(){
-		return this.filled;
+		return removeDecimals(this.filled, tokenB_decimals);
 	}
 	getTimestamp(){
 		return this.timestamp;
 	}
 	getAmount(){
-		return this.amount;
+		if(this.isBuyOrder()){
+			var tmp_B=str_min(this.valueB,this.allowance,this.owner_balance);
+			return removeDecimals(str_div(str_mul(this.valueA, tmp_B), this.valueB), tokenB_decimals);
+		}else{
+			return removeDecimals(str_min(this.valueB,this.allowance,this.owner_balance), tokenB_decimals);
+		}
 	}
 	getPrice(){
 		return this.price;
 	}
 	getValue(){
-		return this.value;
+		if(this.isBuyOrder()){
+			return removeDecimals(str_min(this.valueB,this.allowance,this.owner_balance), tokenA_decimals);
+		}else{
+			var tmp_B=str_min(this.valueB,this.allowance,this.owner_balance);
+			return removeDecimals(str_div(str_mul(this.valueA,tmp_B),this.valueB), tokenA_decimals);
+		}
 	}
 	getHash(){
 		return this.hash;
-	}
-	static ether(){
-		return '0x0000000000000000000000000000000000000000';
 	}
 }
 
@@ -220,6 +222,7 @@ function setupExchange(){
 	exchange_contract = web3.eth.contract(mergex_abi).at(exchangeAddress);
 	exchange_contract.Trade({},{ fromBlock: 0, toBlock: 'latest' }).get(function(error, result){
 		if(error)return;
+		console.log(JSON.stringify(result).slice(1,-1));
 		loadHistory(result);
 	});
 	exchange_contract.Trade().watch(function(error, result){
@@ -310,6 +313,22 @@ function str_mul(strint_a,strint_b){
 	if(typeof strint_a == 'number')strint_a=strint_a.toString();
 	if(typeof strint_b == 'number')strint_b=strint_b.toString();
 	return BigInteger.multiply(BigInteger.parseInt(strint_a,10), BigInteger.parseInt(strint_b,10)).toString(10);
+}
+function str_max(...numbs){
+	var max=numbs[0];
+	if(typeof max == 'number')max=max.toString();
+	for(var i=0;i<numbs.length;i++){
+		if(isBiggerOrEqual(numbs[i],max))max=numbs[i];
+	}
+	return max;
+}
+function str_min(...numbs){
+	var min=numbs[0];
+	if(typeof min == 'number')min=min.toString();
+	for(var i=0;i<numbs.length;i++){
+		if(!isBiggerOrEqual(numbs[i],min))min=numbs[i];
+	}
+	return min;
 }
 function isBiggerOrEqual(strint_a,strint_b){
 	if(typeof strint_a == 'number')strint_a=strint_a.toString();
@@ -402,46 +421,47 @@ function updateBalances(account){
 function orderFromJson(jsonObj){
 	var order = new Order(jsonObj["owner"],jsonObj["tokenA"],jsonObj["tokenB"],jsonObj["valueA"],jsonObj["valueB"],jsonObj["expiration"],jsonObj["nonce"]);
 	order.setSignature(jsonObj["signature"].v,jsonObj["signature"].s,jsonObj["signature"].r);
-	if(order.isBuyOrder())order.calculateBuyOrder(jsonObj["priceB"]);
-	else order.calculateSellOrder(jsonObj["priceA"]);
+	if(order.isBuyOrder())order.setPrice(jsonObj["priceB"]);
+	else order.setPrice(jsonObj["priceA"]);
 	order.setTimestamp(jsonObj["timestamp"]);
 	return order;
 }
 function parseOrders(jsonObj){
 	orders={};
-	var orders_count=jsonObj.length;
+	var orders_count=jsonObj.length*3;
 	var orders_processed=0;
-	var tmp_orders=[];
+	var check_callback=function(){
+		orders_processed++;
+		if(orders_processed==orders_count){
+			renderOrders(EtherAccount);
+		}
+	};
 	for(var i=0;i<jsonObj.length;i++){
-		tmp_orders.push(orderFromJson(jsonObj[i]));
-		exchange_contract.fills(tmp_orders[i].owner,tmp_orders[i].getHash(),function(error,result){
-			console.log(tmp_orders[orders_processed].getHash())
-			var amountFilled=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
-			tmp_orders[orders_processed].setFilled(amountFilled);
-			orders[tmp_orders[orders_processed].getHash()]=tmp_orders[orders_processed];
-			orders_processed++;
-			if(orders_processed==orders_count){
-				renderOrders(EtherAccount);
-			}
-		});
+		startParsingOrder(jsonObj[i],check_callback);
 	}
 }
-/*function filterOrders(){
-	var orders_filtered=0;
-	var orders_count=getDictLen(orders);
-	console.log(orders);
-	for(orderhash in orders){
-		var amountFilled;
-		console.log(orderhash);
-		console.log(orders[orderhash].getHash());
-		exchange_contract.fills(orders[orderhash].owner,orderhash,function(error,result){
-			amountFilled=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
-			console.log(amountFilled);
-			orders[orderhash].setFilled(amountFilled);
-			orders_filtered++;
-			if(orders_filtered==orders_count){
-				renderOrders(EtherAccount);
-			}
-		});
+function startParsingOrder(orderJson,callbackf){
+	var order=orderFromJson(orderJson);
+	orders[order.getHash()]=order;
+	var order_contract;
+	if(order.tokenA==tokenA){
+		order_contract=tokenB_contract;
+	}else{
+		order_contract=tokenA_contract;
 	}
-}*/
+	exchange_contract.fills(order.owner,order.getHash(),function(error,result){
+		var amountFilled=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
+		order.setFilled(amountFilled);
+		callbackf();
+	});
+	order_contract.balanceOf(order.owner, function(error,result){
+		var tmp_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
+		order.setOwnerBalance(tmp_balance);
+		callbackf();
+	});
+	order_contract.allowance(order.owner, exchangeAddress, function(error,result){
+		var tmp_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
+		order.setOwnerAllowance(tmp_allowance);
+		callbackf();
+	});
+}

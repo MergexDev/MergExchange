@@ -23,6 +23,7 @@ var tokenA_decimals;
 var tokenB_decimals;
 var tokenA_balance;
 var tokenB_balance;
+var currentBlock;
 var orders;
 
 class Order{
@@ -83,24 +84,57 @@ class Order{
 		});
 	}
 	sendOrder(ws){
+		console.log("sending_order");
 		if(this.signed){
-			var jsonObj={};
-			jsonObj["action"]="place_order";
-			jsonObj["data"]={};
-			jsonObj["data"]["hash"]=this.hash;
-			jsonObj["data"]["owner"]=this.owner;
-			jsonObj["data"]["tokenA"]=this.tokenA;
-			jsonObj["data"]["tokenB"]=this.tokenB;
-			jsonObj["data"]["valueA"]=this.valueA;
-			jsonObj["data"]["valueB"]=this.valueB;
-			jsonObj["data"]["expiration"]=this.expire;
-			jsonObj["data"]["nonce"]=this.nonce;
-			jsonObj["data"]["signature"]=this.signature;
-			var jsonStr=JSON.stringify(jsonObj);
-			console.log(jsonStr);
-			ws.send(jsonStr);
+			var _this=this;
+			if(this.isBuyOrder()){
+				tokenA_contract.allowance(this.owner, exchangeAddress, function(error, result){
+					if(error)return;
+					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
+					console.log("allow: "+owner_allowance);
+					if(!isBiggerOrEqual(owner_allowance,_this.valueB)){
+						tokenA_contract.approve(exchangeAddress, _this.valueB, { gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
+							if(error)return;
+							_this.finishSendingOrder(ws);
+						});
+					}else{
+						_this.finishSendingOrder(ws);
+					}
+				});
+			}else{
+				tokenB_contract.allowance(this.owner, exchangeAddress, function(error, result){
+					if(error)return;
+					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
+					console.log("allow: "+owner_allowance);
+					if(!isBiggerOrEqual(owner_allowance,_this.valueB)){
+						tokenB_contract.approve(exchangeAddress, _this.valueB, { gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
+							if(error)return;
+							_this.finishSendingOrder(ws);
+						});
+					}else{
+						_this.finishSendingOrder(ws);
+					}
+				});
+			}
 		}
 		return false;
+	}
+	finishSendingOrder(ws){
+		var jsonObj={};
+		jsonObj["action"]="place_order";
+		jsonObj["data"]={};
+		jsonObj["data"]["hash"]=this.hash;
+		jsonObj["data"]["owner"]=this.owner;
+		jsonObj["data"]["tokenA"]=this.tokenA;
+		jsonObj["data"]["tokenB"]=this.tokenB;
+		jsonObj["data"]["valueA"]=this.valueA;
+		jsonObj["data"]["valueB"]=this.valueB;
+		jsonObj["data"]["expiration"]=this.expire;
+		jsonObj["data"]["nonce"]=this.nonce;
+		jsonObj["data"]["signature"]=this.signature;
+		var jsonStr=JSON.stringify(jsonObj);
+		console.log(jsonStr);
+		ws.send(jsonStr);
 	}
 	fillOrder(amount){
 		if(isFullLoaded()){
@@ -110,26 +144,25 @@ class Order{
 			var orderB_decimals;
 			var amountA;
 			var amountB;
-			if(this.tokenA==tokenA){
-				orderA_contract=tokenA_contract;
-				orderB_contract=tokenB_contract;
-				orderA_decimals=tokenA_decimals;
-				orderB_decimals=tokenB_decimals;
-				var amountB=addDecimals(amount,orderB_decimals);
-				var amountA=str_div(str_mul(this.valueA,amountB),this.valueB);
-			}else{
+			if(this.isBuyOrder()){
 				orderA_contract=tokenB_contract;
 				orderB_contract=tokenA_contract;
 				orderA_decimals=tokenB_decimals;
 				orderB_decimals=tokenA_decimals;
 				var amountA=addDecimals(amount,orderA_decimals);
 				var amountB=str_div(str_mul(this.valueB,amountA),this.valueA);
+			}else{
+				orderA_contract=tokenA_contract;
+				orderB_contract=tokenB_contract;
+				orderA_decimals=tokenA_decimals;
+				orderB_decimals=tokenB_decimals;
+				var amountB=addDecimals(amount,orderB_decimals);
+				var amountA=str_div(str_mul(this.valueA,amountB),this.valueB);
 			}
 			var _this=this;
-			orderB_contract.balanceOf(_this.owner, function(error,result){
+			orderB_contract.balanceOf(_this.owner, function(error, result){
 				if(error)return;
 				var owner_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
-				console.log(owner_balance);
 				if(!isBiggerOrEqual(owner_balance,amountB)){
 					console.log("owner does not have funds for order!");
 					return;
@@ -137,7 +170,6 @@ class Order{
 				orderB_contract.allowance(_this.owner, exchangeAddress, function(error,result){
 					if(error)return;
 					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
-					console.log(owner_allowance);
 					if(!isBiggerOrEqual(owner_allowance,amountB)){
 						console.log("owner does not have allowance for order!");
 						return;
@@ -145,7 +177,6 @@ class Order{
 					orderA_contract.balanceOf(EtherAccount, function(error,result){
 						if(error)return;
 						var user_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
-						console.log(user_balance);
 						if(!isBiggerOrEqual(user_balance,amountA)){
 							console.log("User does not have funds to fill the order!");
 							return;
@@ -155,7 +186,7 @@ class Order{
 							var user_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 							console.log(user_allowance);
 							if(!isBiggerOrEqual(user_allowance,amountA)){
-								orderA_contract.approve(exchangeAddress, user_balance, function(error,result){
+								orderA_contract.approve(exchangeAddress, user_balance, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
 									if(error)return;
 									console.log("approve:"+result);
 									_this.fillOrderFinal(amountA);
@@ -170,7 +201,13 @@ class Order{
 		}
 	}
 	fillOrderFinal(amount){
-		exchange_contract.fillOrder(this.owner, this.tokenA, this.tokenB, amount, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, function(error,result){
+		exchange_contract.fillOrder(this.owner, this.tokenA, this.tokenB, amount, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+			if(error)return;
+			console.log("approve:"+result);
+		});
+	}
+	cancelOrder(){
+		exchange_contract.cancelOrder(this.tokenA, this.tokenB, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
 			if(error)return;
 			console.log("approve:"+result);
 		});
@@ -194,7 +231,11 @@ class Order{
 	getTimestamp(){
 		return this.timestamp;
 	}
+	setAmount(){
+		this.amount=this.getAmount();
+	}
 	getAmount(){
+		if(this.amount!=null)return this.amount;
 		if(this.isBuyOrder()){
 			var tmp_B=str_min(this.valueB,this.allowance,this.owner_balance);
 			return removeDecimals(str_div(str_mul(this.valueA, tmp_B), this.valueB), tokenB_decimals);
@@ -206,6 +247,7 @@ class Order{
 		return this.price;
 	}
 	getValue(){
+		if(this.value!=null)return this.value;
 		if(this.isBuyOrder()){
 			return removeDecimals(str_min(this.valueB,this.allowance,this.owner_balance), tokenA_decimals);
 		}else{
@@ -213,8 +255,14 @@ class Order{
 			return removeDecimals(str_div(str_mul(this.valueA,tmp_B),this.valueB), tokenA_decimals);
 		}
 	}
+	setValue(){
+		this.value=this.getValue();
+	}
 	getHash(){
 		return this.hash;
+	}
+	getExpiration(){
+		return this.expire;
 	}
 }
 

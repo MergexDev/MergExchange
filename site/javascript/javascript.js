@@ -31,18 +31,21 @@ function renderOrders(address){
     var orderhtml="<colgroup><col width='24%'><col width='10%'><col width='18%'><col width='18%'><col width='18%'><col width='12%'></colgroup>";
     console.log(orders);
     for(i in orders){
-        if(orders[i].isBuyOrder()){
-            buyhtml+="<tr onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-            if(orders[i].owner==address){
-                orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl>x</ccl></td></tr>"
-            }
-        }else{
-            sellhtml+="<tr onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-            if(orders[i].owner==address){
-                orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl>x</ccl></td></tr>"
+        orders[i].setAmount();
+        orders[i].setValue();
+        if(orders[i].getValue()!="0" && isBiggerOrEqual(orders[i].getExpiration(), currentBlock) && !isBiggerOrEqual(orders[i].filled, orders[i].valueA)){
+            if(orders[i].isBuyOrder()){
+                buyhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
+                if(orders[i].owner==address){
+                    orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
+                }
+            }else{
+                sellhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
+                if(orders[i].owner==address){
+                    orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
+                }
             }
         }
-        
     }
     $("#buys_data").html(buyhtml);
     $("#sells_data").html(sellhtml);
@@ -409,4 +412,7 @@ function loadInfo(){
         loadPriceStatus();
     }
     initMGraph();
+}
+function tryCancelOrder(hash){
+    orders[hash].cancelOrder();
 }

@@ -12,7 +12,7 @@ function isReadyBalance(){
 	return !balanceUpdate && metaMask_load && tokensLoaded();
 }
 function isFullLoaded(){
-	return metaMask_load && webSocked_load && tokensLoaded();
+	return metaMask_load && webSocked_load && currentBlock!=null && tokensLoaded();
 }
 function balancesLoaded(){
 	return tokenA_symbol!=null && tokenB_symbol!=null && tokenA_decimals!=null && tokenB_decimals!=null && tokenA_balance!=null && tokenB_balance!=null;
@@ -77,6 +77,8 @@ function PhaseOneLoading(){
 			jsonObj=JSON.parse(msg);
 			if(jsonObj["action"] == 'get_orders'){
 				parseOrders(jsonObj["data"]);
+			}else if(jsonObj["action"] == 'place_order'){
+				closePopup();
 			}
 		};
 		webSocket.onclose = function(){
@@ -98,20 +100,24 @@ function PhaseTwoLoading(){
 			console.log("MetaMask!");
 			tokenA_contract = web3.eth.contract(erc20_abi).at(tokenA);
 			tokenB_contract = web3.eth.contract(erc20_abi).at(tokenB);
-			tokenA_contract.symbol.call(function(error, symbol){
+			tokenA_contract.symbol(function(error, symbol){
 				tokenA_symbol=symbol;
 				finishPhaseTwoLoading();
 			});
-			tokenB_contract.symbol.call(function(error, symbol){
+			tokenB_contract.symbol(function(error, symbol){
 				tokenB_symbol=symbol;
 				finishPhaseTwoLoading();
 			});
-			tokenA_contract.decimals.call(function(error, decimals){
+			tokenA_contract.decimals(function(error, decimals){
 				tokenA_decimals=decimals;
 				finishPhaseTwoLoading();
 			});
-			tokenB_contract.decimals.call(function(error, decimals){
+			tokenB_contract.decimals(function(error, decimals){
 				tokenB_decimals=decimals;
+				finishPhaseTwoLoading();
+			});
+			web3.eth.getBlockNumber(function(error,result){
+				currentBlock=result;
 				finishPhaseTwoLoading();
 			});
 			web3.version.getNetwork((err, netId) => {

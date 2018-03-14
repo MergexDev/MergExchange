@@ -1,4 +1,5 @@
 $(document).ready(function() {
+	initGraph("graph");
 	PhaseZeroLoading();
 });
 
@@ -51,15 +52,15 @@ function PhaseZeroLoading(){
 		tokenA=result.tokens[tokenA_symbol];
 		tokenB=result.tokens[tokenB_symbol];
 		var markets=result.markets;
-	    var shtml="";
-	    for (var i=0;i<markets.length;i++){
-	    	if(tokenA_symbol == markets[i].tokenA && tokenB_symbol == markets[i].tokenB){
-	    		shtml+="<tr class='current'><td>"+markets[i].ticker+"</td><td>107.53326</td><td>0.002452</td></tr>";
-	    	}else{
-	        	shtml+="<tr onclick='openRedirect(\""+urlpath+"#"+markets[i].tokenA+"-"+markets[i].tokenB+"\")'><td>"+markets[i].ticker+"</td><td>107.53326</td><td>0.002452</td></tr>";
-	        }
-	    }
-	    $("#markets_data").html(shtml);
+		var shtml="";
+		for (var i=0;i<markets.length;i++){
+			if(tokenA_symbol == markets[i].tokenA && tokenB_symbol == markets[i].tokenB){
+				shtml+="<tr class='current'><td>"+markets[i].ticker+"</td><td>107.53326</td><td>0.002452</td></tr>";
+			}else{
+				shtml+="<tr onclick='openRedirect(\""+urlpath+"#"+markets[i].tokenA+"-"+markets[i].tokenB+"\")'><td>"+markets[i].ticker+"</td><td>107.53326</td><td>0.002452</td></tr>";
+			}
+		}
+		$("#markets_data").html(shtml);
 		PhaseOneLoading();
 	}});
 }
@@ -73,7 +74,7 @@ function PhaseOneLoading(){
 		};
 		webSocket.onmessage = function(event) { 
 			var msg = event.data;
-			console.log(msg);
+			//console.log(msg);
 			jsonObj=JSON.parse(msg);
 			if(jsonObj["action"] == 'get_orders'){
 				parseOrders(jsonObj["data"]);
@@ -124,7 +125,7 @@ function PhaseTwoLoading(){
 				switch (netId) {
 					case "1":
 						console.log('This is mainnet');
-			      		break;
+						break;
 					case "2":
 						console.log('This is the deprecated Morden test network.');
 						break;
@@ -169,16 +170,15 @@ function PhaseTwoLoading(){
 
 function PhaseThreeLoading(){
 	setupGraphs();
-    tradeLoadBuy();
-    loadScrolls();
+	tradeLoadBuy();
+	loadScrolls();
 }
 
 function setupGraphs(){
-	initGraph("graph");
-    loadInfo();
-    $(window).on('resize', function(){
-	    $(".graph").html("");
-	    initGraph("graph");
-	    loadInfo();
+	loadInfo();
+	$(window).on('resize', function(){
+		$(".graph").html("");
+		initGraph("graph");
+		loadInfo();
 	});
 }

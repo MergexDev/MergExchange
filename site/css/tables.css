@@ -135,6 +135,7 @@
 	line-height:25px;
 	color:#ffffff;
 	font-weight:bold;
+	cursor:pointer;
 }
 .tradeview .switch{
 	float:left;

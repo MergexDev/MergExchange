@@ -133,7 +133,7 @@ class Order{
 		jsonObj["data"]["nonce"]=this.nonce;
 		jsonObj["data"]["signature"]=this.signature;
 		var jsonStr=JSON.stringify(jsonObj);
-		console.log(jsonStr);
+		console.log("SENDING: "+jsonStr);
 		ws.send(jsonStr);
 	}
 	fillOrder(amount){
@@ -165,6 +165,7 @@ class Order{
 				var owner_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 				if(!isBiggerOrEqual(owner_balance,amountB)){
 					console.log("owner does not have funds for order!");
+					showMessage("Trade error.","Order owner does not have enough funds for this transaction!");
 					return;
 				}
 				orderB_contract.allowance(_this.owner, exchangeAddress, function(error,result){
@@ -172,6 +173,7 @@ class Order{
 					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 					if(!isBiggerOrEqual(owner_allowance,amountB)){
 						console.log("owner does not have allowance for order!");
+						showMessage("Trade error.","Order owner does not have enough allowance for this transaction!");
 						return;
 					}
 					orderA_contract.balanceOf(EtherAccount, function(error,result){
@@ -179,6 +181,7 @@ class Order{
 						var user_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 						if(!isBiggerOrEqual(user_balance,amountA)){
 							console.log("User does not have funds to fill the order!");
+							showMessage("Trade error.","Not enough funds to complete this trade!");
 							return;
 						}
 						orderA_contract.allowance(EtherAccount, exchangeAddress, function(error,result){
@@ -188,7 +191,6 @@ class Order{
 							if(!isBiggerOrEqual(user_allowance,amountA)){
 								orderA_contract.approve(exchangeAddress, user_balance, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
 									if(error)return;
-									console.log("approve:"+result);
 									_this.fillOrderFinal(amountA);
 								});
 							}else{
@@ -206,18 +208,16 @@ class Order{
 			console.log("approve:"+result);
 		});
 	}
-	cancelOrder(){
+	cancelOrder(callbackf){
 		exchange_contract.cancelOrder(this.tokenA, this.tokenB, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+			callbackf();
 			if(error)return;
 			console.log("approve:"+result);
 		});
 	}
 	setFilled(_filled){
-		if(this.tokenA==tokenA){
-			this.filled = str_div(str_mul(_filled,this.valueB),this.valueA);
-		}else{
-			this.filled = _filled;
-		}
+		this.filled_A = _filled;
+		this.filled_B = str_div(str_mul(_filled,this.valueB),this.valueA);
 	}
 	setOwnerAllowance(_allowance){
 		this.allowance=_allowance;
@@ -226,7 +226,11 @@ class Order{
 		this.owner_balance=_balance;
 	}
 	getFilled(){
-		return removeDecimals(this.filled, tokenB_decimals);
+		if(this.tokenA==tokenA){
+			return removeDecimals(this.filled_B, tokenB_decimals);
+		}else{
+			return removeDecimals(this.filled_A, tokenB_decimals);
+		}
 	}
 	getTimestamp(){
 		return this.timestamp;
@@ -236,11 +240,12 @@ class Order{
 	}
 	getAmount(){
 		if(this.amount!=null)return this.amount;
+		var tmp_value_B=this.valueB-this.filled_B;
 		if(this.isBuyOrder()){
-			var tmp_B=str_min(this.valueB,this.allowance,this.owner_balance);
+			var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
 			return removeDecimals(str_div(str_mul(this.valueA, tmp_B), this.valueB), tokenB_decimals);
 		}else{
-			return removeDecimals(str_min(this.valueB,this.allowance,this.owner_balance), tokenB_decimals);
+			return removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenB_decimals);
 		}
 	}
 	getPrice(){
@@ -248,10 +253,11 @@ class Order{
 	}
 	getValue(){
 		if(this.value!=null)return this.value;
+		var tmp_value_B=this.valueB-this.filled_B;
 		if(this.isBuyOrder()){
-			return removeDecimals(str_min(this.valueB,this.allowance,this.owner_balance), tokenA_decimals);
+			return removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenA_decimals);
 		}else{
-			var tmp_B=str_min(this.valueB,this.allowance,this.owner_balance);
+			var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
 			return removeDecimals(str_div(str_mul(this.valueA,tmp_B),this.valueB), tokenA_decimals);
 		}
 	}
@@ -270,12 +276,10 @@ function setupExchange(){
 	exchange_contract = web3.eth.contract(mergex_abi).at(exchangeAddress);
 	exchange_contract.Trade({},{ fromBlock: 0, toBlock: 'latest' }).get(function(error, result){
 		if(error)return;
-		console.log(JSON.stringify(result).slice(1,-1));
 		loadHistory(result);
 	});
 	exchange_contract.Trade().watch(function(error, result){
 		if(error)return;
-		console.log(result);
 	});
 }
 
@@ -286,7 +290,6 @@ function getOrders(ws){
 	jsonObj["data"]["tokenA"]=tokenA;
 	jsonObj["data"]["tokenB"]=tokenB;
 	var jsonStr=JSON.stringify(jsonObj);
-	console.log(jsonStr);
 	ws.send(jsonStr);
 }
 

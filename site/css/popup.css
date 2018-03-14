@@ -1,59 +1,64 @@
- .screenshade{
- 	display:none;
- 	position:absolute;
- 	z-index:10;
- 	width:100%;
- 	height:100%;
- 	opacity:0.6;
-    filter:alpha(opacity=60);
-    background-color:#000000;
- }
- .wrapper{
- 	z-index:5;
- }
- .popup{
- 	display:none;
- 	float:left;
- 	position:absolute;
- 	border-radius: 5px;
- 	z-index:15;
- 	background-color:#ffffff;
- 	width:500px;
- 	height:300px;
- 	left:50%;
- 	top:50%;
- 	padding:10px;
- 	margin-left:-250px;
- 	margin-top:-150px;
- }
- .popup .poptitle{
- 	font-size:16px;
- 	width:100%;
- 	text-align:center;
- 	padding-bottom:8px;
- 	border-bottom:1px solid #000;
- 	margin-bottom:12px;
- }
- .popup confirm,.popup cancel{
- 	position:absolute;
- 	float:left;
- 	bottom:5px;
- 	width:240px;
- 	text-align:center;
- 	height:30px;
- 	line-height:30px;
- 	font-size:14px;
- 	color:#ffffff;
- }
- .popup confirm{
- 	left:6px;
- 	background-color:#44a544;
- }
- .popup cancel{
- 	right:6px;
- 	background-color:#d55555;
- }
- .popup input[type=text]{
+.screenshade{
+	display:none;
+	position:absolute;
+	z-index:10;
+	width:100%;
+	height:100%;
+	opacity:0.6;
+	filter:alpha(opacity=60);
+	background-color:#000000;
+}
+.wrapper{
+	z-index:5;
+}
+.popup{
+	display:none;
+	float:left;
+	position:absolute;
+	border-radius: 5px;
+	z-index:15;
+	background-color:#ffffff;
+	width:500px;
+	height:300px;
+	left:50%;
+	top:50%;
+	padding:10px;
+	margin-left:-250px;
+	margin-top:-150px;
+}
+.popup .poptitle{
+	font-size:16px;
+	width:100%;
+	text-align:center;
+	padding-bottom:8px;
+	border-bottom:1px solid #000;
+	margin-bottom:12px;
+}
+.popup confirm, .popup okbtn, .popup cancel{
+	position:absolute;
+	float:left;
+	bottom:5px;
+	width:240px;
+	text-align:center;
+	height:30px;
+	line-height:30px;
+	font-size:14px;
+	color:#ffffff;
+	cursor:pointer;
+}
+.popup confirm{
+	left:6px;
+	background-color:#44a544;
+}
+.popup okbtn{
+	left:130px;
+	background-color:#44a544;
+}
+.popup cancel{
+	right:6px;
+	background-color:#d55555;
+}
+.popup input[type=text]{
 	border:1px solid #b5b5b5;
 	margin-top:10px;
 	width:240px;

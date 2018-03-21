@@ -11,6 +11,7 @@ var balanceUpdate=false;
 var ordersUpdate=false;
 var metaMask_load=false;
 var webSocked_load=false;
+var local_nonce="0"
 var webSocket;
 var EtherAccount;
 var tokenA;
@@ -204,8 +205,8 @@ class Order{
 	}
 	fillOrderFinal(amount){
 		exchange_contract.fillOrder(this.owner, this.tokenA, this.tokenB, amount, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+			closePopup();
 			if(error)return;
-			console.log("approve:"+result);
 		});
 	}
 	cancelOrder(callbackf){
@@ -280,6 +281,7 @@ function setupExchange(){
 	});
 	exchange_contract.Trade().watch(function(error, result){
 		if(error)return;
+		appendHistory(result);
 	});
 }
 
@@ -422,8 +424,8 @@ function createBuyOrder(price, amount){
 			exp = str_add(block, exp);
 			var valueA = calculateValue(amount, price, tokenA_decimals);
 			var valueB = addDecimals(amount, tokenB_decimals);
-			var signedOrder=new Order(EtherAccount, tokenA, tokenB, valueA, valueB, exp, '1');
-			//@do order things here!
+			var signedOrder=new Order(EtherAccount, tokenA, tokenB, valueA, valueB, exp, local_nonce);
+			local_nonce=str_add(local_nonce,"1");
 			signedOrder.sign(EtherAccount,web3js,function(){
 				signedOrder.sendOrder(webSocket);
 			});
@@ -439,8 +441,8 @@ function createSellOrder(price, amount){
 			exp = str_add(block, exp);
 			var valueA = addDecimals(amount, tokenB_decimals);
 			var valueB = calculateValue(amount, price, tokenA_decimals);
-			var signedOrder=new Order(EtherAccount, tokenB, tokenA, valueA, valueB, exp, '1');
-			//@do order things here!
+			var signedOrder=new Order(EtherAccount, tokenB, tokenA, valueA, valueB, exp, local_nonce);
+			local_nonce=str_add(local_nonce,"1");
 			signedOrder.sign(EtherAccount,web3js,function(){
 				signedOrder.sendOrder(webSocket);
 			});
@@ -484,6 +486,26 @@ function parseOrders(jsonObj){
 	var check_callback=function(){
 		orders_processed++;
 		if(orders_processed==orders_count){
+			for(i in orders){
+				orders[i].setAmount();
+				orders[i].setValue();
+				/*console.log("-------------------------");
+				console.log("Order: "+orders[i].getHash());
+				console.log("-------------------------");
+				console.log("Amount: "+orders[i].getAmount());
+				console.log("Value: "+orders[i].getValue());
+				console.log(isBiggerOrEqual(orders[i].getExpiration(), currentBlock));
+				console.log("Fill: "+orders[i].filled_B+" = "+orders[i].valueB);
+				console.log(!isBiggerOrEqual(orders[i].filled_B, orders[i].valueB));*/
+				if(orders[i].owner==EtherAccount&&orders[i].nonce==local_nonce){
+					local_nonce=str_add(local_nonce,"1");
+				}
+				if(orders[i].getValue()=="0" 
+				|| !isBiggerOrEqual(orders[i].getExpiration(), currentBlock)
+				|| isBiggerOrEqual(orders[i].filled_B, orders[i].valueB)){
+					delete orders[i];
+				}
+			}
 			renderOrders(EtherAccount);
 		}
 	};

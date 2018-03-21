@@ -1,27 +1,95 @@
+var MGraphData;
+var transactions
+
 function loadHistory(trades){
-	var shtml="";
-	for(var i=0;i<trades.length;i++){
+	transactions=[]
+	for(var i=trades.length-1;i>=Math.max(0, trades.length-100);i--){
 		var tA=trades[i].args.tokenA;
 		var tB=trades[i].args.tokenB;
 		if((tA!=tokenA&&tA!=tokenB)||(tB!=tokenA&&tB!=tokenB))continue;
 		var vA=fromScientificToStrint(JSON.stringify(trades[i].args.valueA).slice(1,-1));
 		var vB=fromScientificToStrint(JSON.stringify(trades[i].args.valueB).slice(1,-1));
-		var hash=trades[i].transactionHash;
-		var amount;
-		var price;
+		var transaction={}
+		transaction["hash"]=trades[i].transactionHash;
+		transaction["block"]=trades[i].blockNumber;
 		if(tA==tokenA){
-			amount=removeDecimals(vB,tokenB_decimals);
-			price=removeDecimals(str_div(addDecimals(vA,tokenB_decimals),vB),tokenA_decimals);
-			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+hash+"\")'><td class='recent'>13:17:23</td><td class='value' title='"+amount+"'>"+toDecimals(amount)+"</td><td class='bprice' title='"+price+"'>"+toDecimals(price)+"</td></tr>";
+			transaction["amount"]=removeDecimals(vB,tokenB_decimals);
+			transaction["price"]=removeDecimals(str_div(addDecimals(vA,tokenB_decimals),vB),tokenA_decimals);
+			transaction["type"]="buy";
 		}else{
-			amount=removeDecimals(vA,tokenB_decimals);
-			price=removeDecimals(str_div(addDecimals(vB,tokenB_decimals),vA),tokenA_decimals);
-			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+hash+"\")'><td class='recent'>13:17:23</td><td class='value' title='"+amount+"'>"+toDecimals(amount)+"</td><td class='sprice' title='"+price+"'>"+toDecimals(price)+"</td></tr>";
+			transaction["amount"]=removeDecimals(vA,tokenB_decimals);
+			transaction["price"]=removeDecimals(str_div(addDecimals(vB,tokenB_decimals),vA),tokenA_decimals);
+			transaction["type"]="sell";
+		}
+		transactions.push(transaction);
+	}
+	var history_count=transactions.length;
+	var history_processed=0;
+	var check_callback=function(){
+		history_processed++;
+		if(history_processed==history_count){
+			finishLoadingHistory();
 		}
 	}
-	for (var i=0;i<40;i++){
+	for(var i=0;i<transactions.length;i++){
+		getTimeForTransaction(i,check_callback);
+	}
+}
+
+function finishLoadingHistory(){
+	var shtml="";
+	for(var i=0;i<transactions.length;i++){
+		if(transactions[i]["type"]=="buy"){
+			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='bprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
+		}else{
+			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='sprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
+		}
 	}
 	$("#history_data").html(shtml);
+}
+
+function getTimeForTransaction(tindex,callbackf){
+	web3.eth.getBlock(transactions[tindex]["block"],function(error, result){
+		if(error)return;
+		var date=new Date(result["timestamp"]*1000);
+		var short_date=("0"+date.getHours()).substr(-2)+":"+("0"+date.getMinutes()).substr(-2)+":"+("0"+date.getSeconds()).substr(-2);
+		var full_date=("0"+date.getDate()).substr(-2)+"/"+("0"+(date.getMonth()+1)).substr(-2)+"/"+date.getFullYear()+" "+short_date;
+		transactions[tindex]["time"]=short_date;
+		transactions[tindex]["date"]=full_date;
+		callbackf();
+	});
+}
+
+function appendHistory(trade){
+	var tA=trade.args.tokenA;
+	var tB=trade.args.tokenB;
+	if((tA!=tokenA&&tA!=tokenB)||(tB!=tokenA&&tB!=tokenB))return;
+	var vA=fromScientificToStrint(JSON.stringify(trade.args.valueA).slice(1,-1));
+	var vB=fromScientificToStrint(JSON.stringify(trade.args.valueB).slice(1,-1));
+	var transaction={}
+	transaction["hash"]=trade.transactionHash;
+	transaction["block"]=trade.blockNumber;
+	if(tA==tokenA){
+		transaction["amount"]=removeDecimals(vB,tokenB_decimals);
+		transaction["price"]=removeDecimals(str_div(addDecimals(vA,tokenB_decimals),vB),tokenA_decimals);
+		transaction["type"]="buy";
+	}else{
+		transaction["amount"]=removeDecimals(vA,tokenB_decimals);
+		transaction["price"]=removeDecimals(str_div(addDecimals(vB,tokenB_decimals),vA),tokenA_decimals);
+		transaction["type"]="sell";
+	}
+	transactions.push(transaction);
+	var lastTransaction=transactions.length-1;
+	getTimeForTransaction(lastTransaction,function(){
+		console.log("adding new transaction.");
+		if(transactions[lastTransaction]["type"]=="buy"){
+			var shtml="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='bprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
+		}else{
+			var shtml="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='sprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
+		}
+		console.log(shtml);
+		$("#history_data").html(shtml+$("#history_data").html());
+	});
 }
 
 function renderOrders(address){
@@ -31,30 +99,19 @@ function renderOrders(address){
 	var orderhtml="<colgroup><col width='24%'><col width='10%'><col width='18%'><col width='18%'><col width='18%'><col width='12%'></colgroup>";
 	console.log(orders);
 	for(i in orders){
-		orders[i].setAmount();
-		orders[i].setValue();
-		console.log("-------------------------");
-		console.log("Order: "+orders[i].getHash());
-		console.log("-------------------------");
-		console.log("Amount: "+orders[i].getAmount());
-		console.log("Value: "+orders[i].getValue());
-		console.log(isBiggerOrEqual(orders[i].getExpiration(), currentBlock));
-		console.log("Fill: "+orders[i].filled_B+" = "+orders[i].valueB);
-		console.log(!isBiggerOrEqual(orders[i].filled_B, orders[i].valueB));
-		if(orders[i].getValue()!="0" && isBiggerOrEqual(orders[i].getExpiration(), currentBlock) && !isBiggerOrEqual(orders[i].filled_B, orders[i].valueB)){
-			if(orders[i].isBuyOrder()){
-				buyhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-				if(orders[i].owner==address){
-					orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
-				}
-			}else{
-				sellhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-				if(orders[i].owner==address){
-					orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
-				}
+		if(orders[i].isBuyOrder()){
+			buyhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
+			if(orders[i].owner==address){
+				orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
+			}
+		}else{
+			sellhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
+			if(orders[i].owner==address){
+				orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
 			}
 		}
 	}
+	generateDataBid();
 	$("#buys_data").html(buyhtml);
 	$("#sells_data").html(sellhtml);
 	$("#orders_data").html(orderhtml);
@@ -165,8 +222,31 @@ function tradeLoadFill(){
 	});
 }
 
+function generateDataBid(){
+	var data={}
+	data["dataBid"]=[];
+	data["dataAsk"]=[];
+	for(key in orders){
+		var tmp={}
+		tmp.x=parseFloat(orders[key].getPrice());
+		tmp.y=parseFloat(orders[key].getAmount());
+		console.log(tmp);
+		if(orders[key].isBuyOrder())data["dataBid"].push(tmp);
+		else data["dataAsk"].push(tmp);
+	}
+	for(var i=1;i<data["dataBid"].length;i++){
+		data["dataBid"][i].y+=data["dataBid"][i-1].y;
+	}
+	for(var i=1;i<data["dataAsk"].length;i++){
+		data["dataAsk"][i].y+=data["dataAsk"][i-1].y;
+	}
+	console.log(data);
+	MGraphData=data;
+	loadInfo();
+}
+
 function initMGraph(){
-	var dataBid = [
+	/*var dataBid = [
 	{ x: 30, y: 564, },
 	{ x: 32, y: 532, },
 	{ x: 33, y: 476, },
@@ -185,12 +265,14 @@ function initMGraph(){
 	{ x: 42, y: 89, },
 	{ x: 41, y: 55, },
 	{ x: 40, y: 0, },
-	];
+	];*/
+	var dataBid=MGraphData["dataBid"];
+	var dataAsk=MGraphData["dataAsk"];
 	var margin = {top: 15, right: 15, bottom: 25, left: 15},
 	width = $(".orderstatus").width() - margin.left - margin.right,
 	height = $(".orderstatus").height() - margin.top - margin.bottom-105;
 	var x = d3.scaleLinear()
-	.domain([d3.min(dataBid, function(d) { return d.x; }), d3.max(dataAsk, function(d) { return d.x; })])
+	.domain([d3.min(dataBid.concat(dataAsk), function(d) { return d.x; }), d3.max(dataBid.concat(dataAsk), function(d) { return d.x; })])
 	.range([0, width]);
 	var y = d3.scaleLinear()
 	.domain([0, d3.max(dataBid.concat(dataAsk), function(d) { return d.y*1.1; })])
@@ -454,5 +536,7 @@ function loadInfo(){
 	if(balancesLoaded()){
 		loadPriceStatus();
 	}
-	initMGraph();
+	if(MGraphData!=null){
+		initMGraph();
+	}
 }

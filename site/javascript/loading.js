@@ -74,10 +74,10 @@ function PhaseOneLoading(){
 		};
 		webSocket.onmessage = function(event) { 
 			var msg = event.data;
-			//console.log(msg);
+			console.log("from server: "+msg);
 			jsonObj=JSON.parse(msg);
 			if(jsonObj["action"] == 'get_orders'){
-				parseOrders(jsonObj["data"]);
+				parseOrders(jsonObj["buyOrders"].concat(jsonObj["sellOrders"]));
 			}else if(jsonObj["action"] == 'place_order'){
 				closePopup();
 			}
@@ -177,6 +177,7 @@ function PhaseThreeLoading(){
 function setupGraphs(){
 	loadInfo();
 	$(window).on('resize', function(){
+		console.log("----");
 		$(".graph").html("");
 		initGraph("graph");
 		loadInfo();

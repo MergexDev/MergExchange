@@ -325,7 +325,7 @@ contract EtherStore is Managable{
 contract Mergex is EtherStore{
 	using SafeMath for uint256;
 	mapping(address => mapping(bytes32 => uint256)) public fills;
-	event Trade(uint timestamp, address tokenA, address tokenB, uint valueA, uint valueB);
+	event Trade(address tokenA, address tokenB, uint valueA, uint valueB);
 
 	function Mergex() EtherStore() public {
 	}
@@ -344,7 +344,7 @@ contract Mergex is EtherStore{
 			if(!tradeTokens(msg.sender,owner,tokenA,tokenB,tradeAmount,valueA,valueB)){
 				revert();
 			}
-			Trade(now, tokenA, tokenB, tradeAmount, valueB.mul(tradeAmount).div(valueA));
+			Trade(tokenA, tokenB, tradeAmount, valueB.mul(tradeAmount).div(valueA));
 			fills[owner][hash]=fills[owner][hash].add(tradeAmount);
 		}
 	}

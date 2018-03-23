@@ -80,6 +80,8 @@ function PhaseOneLoading(){
 				parseOrders(jsonObj["buyOrders"].concat(jsonObj["sellOrders"]));
 			}else if(jsonObj["action"] == 'place_order'){
 				closePopup();
+			}else if(jsonObj["action"] == 'add_order'){
+				appendOrder(jsonObj["order"]);
 			}
 		};
 		webSocket.onclose = function(){

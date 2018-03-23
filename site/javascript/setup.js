@@ -13,6 +13,8 @@ function createStyle(upcolor,downcolor){
 	css.innerHTML+=".areaAsk{stroke:#"+downcolor+";fill:#"+mergeColors(downcolor,"28282b",0.25)+";}";
 	css.innerHTML+=".sellscontent tr:hover{background-color:#"+downcolor+";}";
 	css.innerHTML+=".buyscontent tr:hover{background-color:#"+upcolor+";}";
+	css.innerHTML+=".sellscontent tr.appear{background-color:#"+downcolor+";}";
+	css.innerHTML+=".buyscontent tr.appear{background-color:#"+upcolor+";}";
 	css.innerHTML+="pf{background-color:#"+mergeColors(upcolor,"5f506f",0.65)+";}";
 	css.innerHTML+="pf:hover{background-color:#"+downcolor+";}";
 	css.innerHTML+="#gasInfo:hover{color:#"+downcolor+";}";

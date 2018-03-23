@@ -35,7 +35,7 @@
 .sellscontent tr:hover,.buyscontent tr:hover, .marketscontent tr:hover, .historycontent tr:hover{
 	cursor:pointer;
 }
-.sellscontent tr:hover .price,.buyscontent tr:hover .price{
+.sellscontent tr:hover .price, .buyscontent tr:hover .price, .sellscontent tr.appear .price, .buyscontent tr.appear .price{
 	color:#ffffff;
 }
 .sells .price,.sprice{
@@ -170,7 +170,7 @@ ccl{
 	background-color: #45454f;
 	font-weight: bold;
 }
-.marketscontent tr:hover, .historycontent tr:hover{
+.marketscontent tr:hover, .historycontent tr:hover, .historycontent tr.appear{
 	background-color: #65656f;
 }
 .sellscontent tr, .buyscontent tr, .marketscontent tr, .historycontent tr, .orderscontent tr{

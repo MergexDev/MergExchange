@@ -53,7 +53,7 @@ function getTimeForTransaction(tindex,callbackf){
 		if(error)return;
 		var date=new Date(result["timestamp"]*1000);
 		var short_date=("0"+date.getHours()).substr(-2)+":"+("0"+date.getMinutes()).substr(-2)+":"+("0"+date.getSeconds()).substr(-2);
-		var full_date=("0"+date.getDate()).substr(-2)+"/"+("0"+(date.getMonth()+1)).substr(-2)+"/"+date.getFullYear()+" "+short_date;
+		var full_date=("0"+date.getDate()).substr(-2)+"-"+("0"+(date.getMonth()+1)).substr(-2)+"-"+date.getFullYear()+" "+short_date;
 		transactions[tindex]["time"]=short_date;
 		transactions[tindex]["date"]=full_date;
 		callbackf();
@@ -81,14 +81,16 @@ function appendHistory(trade){
 	transactions.push(transaction);
 	var lastTransaction=transactions.length-1;
 	getTimeForTransaction(lastTransaction,function(){
-		console.log("adding new transaction.");
 		if(transactions[lastTransaction]["type"]=="buy"){
-			var shtml="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='bprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
+			var shtml="<tr class='appear' onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='bprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
 		}else{
-			var shtml="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='sprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
+			var shtml="<tr class='appear' onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='sprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
 		}
 		console.log(shtml);
-		$("#history_data").html(shtml+$("#history_data").html());
+		$("#history_data").prepend(shtml);
+		setTimeout(function(){
+			$(".historycontent tr.appear").removeClass("appear");
+		},100);
 	});
 }
 
@@ -98,16 +100,37 @@ function renderOrders(address){
 	var sellhtml="";
 	var orderhtml="<colgroup><col width='24%'><col width='10%'><col width='18%'><col width='18%'><col width='18%'><col width='12%'></colgroup>";
 	console.log(orders);
-	for(i in orders){
-		if(orders[i].isBuyOrder()){
-			buyhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-			if(orders[i].owner==address){
-				orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
+	var tmp_orders=[];
+	for(key in orders){
+		tmp_orders.push(orders[key]);
+	}
+	tmp_orders.sort(function(a, b) {
+		return b.comparePrice(a);
+	});
+	for(var i=0;i<tmp_orders.length;i++){
+		if(tmp_orders[i].isBuyOrder()){
+			if(tmp_orders[i].getType()=="regular"){
+				buyhtml+="<tr ";
+			}else if(tmp_orders[i].getType()=="append"){
+				buyhtml+="<tr class='appear' ";
+			}else if(tmp_orders[i].getType()=="remove"){
+				buyhtml+="<tr class='disappear' ";
+			}
+			buyhtml+="id='id_"+tmp_orders[i].getHash()+"' onclick='setupOrderFill(\""+tmp_orders[i].getHash()+"\",\""+tmp_orders[i].getAmount()+"\")'><td class='price' title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td class='amount' title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td class='value' title='"+tmp_orders[i].getValue()+"'>"+toDecimals(tmp_orders[i].getValue())+"</td></tr>";
+			if(tmp_orders[i].owner==address){
+				orderhtml+="<tr><td title='"+tmp_orders[i].getTimestamp()+"'>"+tmp_orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td title='"+tmp_orders[i].getFilled()+"'>"+toDecimals(tmp_orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+tmp_orders[i].getHash()+"\")'>x</ccl></td></tr>"
 			}
 		}else{
-			sellhtml+="<tr id='id_"+orders[i].getHash()+"' onclick='setupOrderFill(\""+orders[i].getHash()+"\",\""+orders[i].getAmount()+"\")'><td class='price' title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td class='amount' title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td class='value' title='"+orders[i].getValue()+"'>"+toDecimals(orders[i].getValue())+"</td></tr>";
-			if(orders[i].owner==address){
-				orderhtml+="<tr><td title='"+orders[i].getTimestamp()+"'>"+orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+orders[i].getPrice()+"'>"+toDecimals(orders[i].getPrice())+"</td><td title='"+orders[i].getAmount()+"'>"+toDecimals(orders[i].getAmount())+"</td><td title='"+orders[i].getFilled()+"'>"+toDecimals(orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+orders[i].getHash()+"\")'>x</ccl></td></tr>"
+			if(tmp_orders[i].getType()=="regular"){
+				sellhtml+="<tr ";
+			}else if(tmp_orders[i].getType()=="append"){
+				sellhtml+="<tr class='appear' ";
+			}else if(tmp_orders[i].getType()=="remove"){
+				sellhtml+="<tr class='disappear' ";
+			}
+			sellhtml+="id='id_"+tmp_orders[i].getHash()+"' onclick='setupOrderFill(\""+tmp_orders[i].getHash()+"\",\""+tmp_orders[i].getAmount()+"\")'><td class='price' title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td class='amount' title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td class='value' title='"+tmp_orders[i].getValue()+"'>"+toDecimals(tmp_orders[i].getValue())+"</td></tr>";
+			if(tmp_orders[i].owner==address){
+				orderhtml+="<tr><td title='"+tmp_orders[i].getTimestamp()+"'>"+tmp_orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td title='"+tmp_orders[i].getFilled()+"'>"+toDecimals(tmp_orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+tmp_orders[i].getHash()+"\")'>x</ccl></td></tr>"
 			}
 		}
 	}
@@ -115,6 +138,12 @@ function renderOrders(address){
 	$("#buys_data").html(buyhtml);
 	$("#sells_data").html(sellhtml);
 	$("#orders_data").html(orderhtml);
+	setTimeout(function(){
+		$("#buys_data tr.appear").removeClass("appear");
+		$("#sells_data tr.appear").removeClass("appear");
+		$("#buys_data tr.disappear").fadeOut(250);
+		$("#sells_data tr.disappear").fadeOut(250);
+	},100);
 }
 
 function openLink(link){
@@ -230,17 +259,21 @@ function generateDataBid(){
 		var tmp={}
 		tmp.x=parseFloat(orders[key].getPrice());
 		tmp.y=parseFloat(orders[key].getAmount());
-		console.log(tmp);
 		if(orders[key].isBuyOrder())data["dataBid"].push(tmp);
 		else data["dataAsk"].push(tmp);
 	}
+	data["dataBid"].sort(function(a, b) {
+		return b.x-a.x;
+	});
+	data["dataAsk"].sort(function(a, b) {
+		return b.x-a.x;
+	});
 	for(var i=1;i<data["dataBid"].length;i++){
 		data["dataBid"][i].y+=data["dataBid"][i-1].y;
 	}
-	for(var i=1;i<data["dataAsk"].length;i++){
-		data["dataAsk"][i].y+=data["dataAsk"][i-1].y;
+	for(var i=data["dataAsk"].length-1;i>0;i--){
+		data["dataAsk"][i-1].y+=data["dataAsk"][i].y;
 	}
-	console.log(data);
 	MGraphData=data;
 	loadInfo();
 }

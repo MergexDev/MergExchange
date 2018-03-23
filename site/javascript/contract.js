@@ -37,13 +37,21 @@ class Order{
 		this.expire = _expire;
 		this.nonce = _nonce;
 		this.signed = false;
+		this.type="regular";
 		this.hash=sha256('mergex',this.owner,this.tokenA,this.tokenB,this.valueA,this.valueB,this.expire,this.nonce);
+	}
+	setType(type){
+		this.type=type;
+	}
+	getType(){
+		return this.type;
 	}
 	setPriceAndAmount(_price, _amount){
 		this.price = _price;
 		this.amount = _amount;
 	}
 	setPrice(price){
+		this.price_full=price;
 		this.price = removeDecimals(price, tokenA_decimals);
 	}
 	setSignature(v,s,r){
@@ -219,6 +227,7 @@ class Order{
 	setFilled(_filled){
 		this.filled_A = _filled;
 		this.filled_B = str_div(str_mul(_filled,this.valueB),this.valueA);
+		this.filled_full = null;
 	}
 	setOwnerAllowance(_allowance){
 		this.allowance=_allowance;
@@ -227,49 +236,53 @@ class Order{
 		this.owner_balance=_balance;
 	}
 	getFilled(){
-		if(this.tokenA==tokenA){
-			return removeDecimals(this.filled_B, tokenB_decimals);
-		}else{
-			return removeDecimals(this.filled_A, tokenB_decimals);
+		if(this.filled_full==null){
+			if(this.tokenA==tokenA){
+				this.filled_full = removeDecimals(this.filled_B, tokenB_decimals);
+			}else{
+				this.filled_full = removeDecimals(this.filled_A, tokenB_decimals);
+			}
 		}
+		return this.filled_full;
 	}
 	getTimestamp(){
 		return this.timestamp;
 	}
-	setAmount(){
-		this.amount=this.getAmount();
-	}
 	getAmount(){
-		if(this.amount!=null)return this.amount;
-		var tmp_value_B=this.valueB-this.filled_B;
-		if(this.isBuyOrder()){
-			var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
-			return removeDecimals(str_div(str_mul(this.valueA, tmp_B), this.valueB), tokenB_decimals);
-		}else{
-			return removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenB_decimals);
+		if(this.amount==null){
+			var tmp_value_B=this.valueB-this.filled_B;
+			if(this.isBuyOrder()){
+				var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
+				this.amount = removeDecimals(str_div(str_mul(this.valueA, tmp_B), this.valueB), tokenB_decimals);
+			}else{
+				this.amount = removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenB_decimals);
+			}
 		}
+		return this.amount;
 	}
 	getPrice(){
 		return this.price;
 	}
 	getValue(){
-		if(this.value!=null)return this.value;
-		var tmp_value_B=this.valueB-this.filled_B;
-		if(this.isBuyOrder()){
-			return removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenA_decimals);
-		}else{
-			var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
-			return removeDecimals(str_div(str_mul(this.valueA,tmp_B),this.valueB), tokenA_decimals);
+		if(this.value==null){
+			var tmp_value_B=this.valueB-this.filled_B;
+			if(this.isBuyOrder()){
+				this.value = removeDecimals(str_min(tmp_value_B,this.allowance,this.owner_balance), tokenA_decimals);
+			}else{
+				var tmp_B=str_min(tmp_value_B,this.allowance,this.owner_balance);
+				this.value = removeDecimals(str_div(str_mul(this.valueA,tmp_B),this.valueB), tokenA_decimals);
+			}
 		}
-	}
-	setValue(){
-		this.value=this.getValue();
+		return this.value;
 	}
 	getHash(){
 		return this.hash;
 	}
 	getExpiration(){
 		return this.expire;
+	}
+	comparePrice(order_b){
+		return compareStrInts(this.price_full,order_b.price_full);
 	}
 }
 
@@ -398,6 +411,21 @@ function isBiggerOrEqual(strint_a,strint_b){
 	}
 	return false;
 }
+function compareStrInts(strint_a,strint_b){
+	if(typeof strint_a == 'number')strint_a=strint_a.toString();
+	if(typeof strint_b == 'number')strint_b=strint_b.toString();
+	if(strint_a.length>strint_b.length)return 1;
+	else if(strint_a.length==strint_b.length){
+		while(strint_a.length){
+			if(Number(strint_a[0])>Number(strint_b[0]))return 1;
+			else if(Number(strint_a[0])<Number(strint_b[0]))return -1;
+			strint_a=strint_a.slice(1);
+			strint_b=strint_b.slice(1);
+		}
+		return 0;
+	}
+	return -1;
+}
 function str_sub(strint_a,strint_b){
 	if(typeof strint_a == 'number')strint_a=strint_a.toString();
 	if(typeof strint_b == 'number')strint_b=strint_b.toString();
@@ -483,28 +511,19 @@ function parseOrders(jsonObj){
 	orders={};
 	var orders_count=jsonObj.length*3;
 	var orders_processed=0;
-	var check_callback=function(){
+	var check_callback=function(dummy){
 		orders_processed++;
 		if(orders_processed==orders_count){
-			for(i in orders){
-				orders[i].setAmount();
-				orders[i].setValue();
+			for(hash in orders){
 				/*console.log("-------------------------");
-				console.log("Order: "+orders[i].getHash());
+				console.log("Order: "+orders[hash].getHash());
 				console.log("-------------------------");
-				console.log("Amount: "+orders[i].getAmount());
-				console.log("Value: "+orders[i].getValue());
-				console.log(isBiggerOrEqual(orders[i].getExpiration(), currentBlock));
-				console.log("Fill: "+orders[i].filled_B+" = "+orders[i].valueB);
-				console.log(!isBiggerOrEqual(orders[i].filled_B, orders[i].valueB));*/
-				if(orders[i].owner==EtherAccount&&orders[i].nonce==local_nonce){
-					local_nonce=str_add(local_nonce,"1");
-				}
-				if(orders[i].getValue()=="0" 
-				|| !isBiggerOrEqual(orders[i].getExpiration(), currentBlock)
-				|| isBiggerOrEqual(orders[i].filled_B, orders[i].valueB)){
-					delete orders[i];
-				}
+				console.log("Amount: "+orders[hash].getAmount());
+				console.log("Value: "+orders[hash].getValue());
+				console.log(isBiggerOrEqual(orders[hash].getExpiration(), currentBlock));
+				console.log("Fill: "+orders[hash].filled_B+" = "+orders[hash].valueB);
+				console.log(!isBiggerOrEqual(orders[hash].filled_B, orders[hash].valueB));*/
+				filterOrder(hash);
 			}
 			renderOrders(EtherAccount);
 		}
@@ -512,6 +531,29 @@ function parseOrders(jsonObj){
 	for(var i=0;i<jsonObj.length;i++){
 		startParsingOrder(jsonObj[i],check_callback);
 	}
+}
+function filterOrder(orderHash){
+	if(orders[orderHash].owner==EtherAccount&&orders[orderHash].nonce==local_nonce){
+		local_nonce=str_add(local_nonce,"1");
+	}
+	if(orders[orderHash].getValue()=="0" 
+	|| !isBiggerOrEqual(orders[orderHash].getExpiration(), currentBlock)
+	|| isBiggerOrEqual(orders[orderHash].filled_B, orders[orderHash].valueB)){
+		delete orders[orderHash];
+	}
+}
+function appendOrder(jsonObj){
+	var orders_count=3;
+	var orders_processed=0;
+	var check_callback=function(hash){
+		orders_processed++;
+		if(orders_processed==orders_count){
+			orders[hash].setType("append");
+			filterOrder(hash);
+			renderOrders(EtherAccount);
+		}
+	};
+	startParsingOrder(jsonObj,check_callback);
 }
 function startParsingOrder(orderJson,callbackf){
 	var order=orderFromJson(orderJson);
@@ -525,16 +567,16 @@ function startParsingOrder(orderJson,callbackf){
 	exchange_contract.fills(order.owner,order.getHash(),function(error,result){
 		var amountFilled=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setFilled(amountFilled);
-		callbackf();
+		callbackf(order.getHash());
 	});
 	order_contract.balanceOf(order.owner, function(error,result){
 		var tmp_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setOwnerBalance(tmp_balance);
-		callbackf();
+		callbackf(order.getHash());
 	});
 	order_contract.allowance(order.owner, exchangeAddress, function(error,result){
 		var tmp_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setOwnerAllowance(tmp_allowance);
-		callbackf();
+		callbackf(order.getHash());
 	});
 }

@@ -1,5 +1,6 @@
 var MGraphData;
 var transactions
+var candles;
 
 function loadHistory(trades){
 	transactions=[]
@@ -14,11 +15,13 @@ function loadHistory(trades){
 		transaction["block"]=trades[i].blockNumber;
 		if(tA==tokenA){
 			transaction["amount"]=removeDecimals(vB,tokenB_decimals);
-			transaction["price"]=removeDecimals(str_div(addDecimals(vA,tokenB_decimals),vB),tokenA_decimals);
+			transaction["price_full"]=str_div(addDecimals(vA,tokenB_decimals),vB);
+			transaction["price"]=removeDecimals(transaction["price_full"],tokenA_decimals);
 			transaction["type"]="buy";
 		}else{
 			transaction["amount"]=removeDecimals(vA,tokenB_decimals);
-			transaction["price"]=removeDecimals(str_div(addDecimals(vB,tokenB_decimals),vA),tokenA_decimals);
+			transaction["price_full"]=str_div(addDecimals(vB,tokenB_decimals),vA)
+			transaction["price"]=removeDecimals(transaction["price_full"],tokenA_decimals);
 			transaction["type"]="sell";
 		}
 		transactions.push(transaction);
@@ -28,11 +31,42 @@ function loadHistory(trades){
 	var check_callback=function(){
 		history_processed++;
 		if(history_processed==history_count){
+			createHistoryGraph();
 			finishLoadingHistory();
+			initGraph("graph");
 		}
 	}
 	for(var i=0;i<transactions.length;i++){
 		getTimeForTransaction(i,check_callback);
+	}
+}
+function createHistoryGraph(){
+	candles=[]
+	for(var i=0;i<transactions.length;i++){
+		currDate=new Date(transactions[i]["fulldate"].getFullYear(),transactions[i]["fulldate"].getMonth(),transactions[i]["fulldate"].getDate());
+		if(candles.length>0&&candles[candles.length-1]["date"].getTime()===currDate.getTime()){
+			candles[candles.length-1]["close"]=transactions[i]["price_full"]
+			if(compareStrInts(transactions[i]["price_full"], candles[candles.length-1]["high"])>0){
+				candles[candles.length-1]["high"]=transactions[i]["price_full"];
+			}else if(compareStrInts(transactions[i]["price_full"], candles[candles.length-1]["low"])<0){
+				candles[candles.length-1]["low"]=transactions[i]["price_full"];
+			}
+		}else{
+			candle={}
+			candle["date"]=currDate;
+			candle["open"]=transactions[i]["price_full"];
+			candle["high"]=transactions[i]["price_full"];
+			candle["low"]=transactions[i]["price_full"];
+			candle["close"]=transactions[i]["price_full"];
+			candle["volume"]=0;
+			candles.push(candle);
+		}
+	}
+	for(var i=0;i<candles.length;i++){
+		candles[i]["open"]=parseFloat(removeDecimals(candles[i]["open"],tokenA_decimals));
+		candles[i]["high"]=parseFloat(removeDecimals(candles[i]["high"],tokenA_decimals));
+		candles[i]["low"]=parseFloat(removeDecimals(candles[i]["low"],tokenA_decimals));
+		candles[i]["close"]=parseFloat(removeDecimals(candles[i]["close"],tokenA_decimals));
 	}
 }
 
@@ -56,6 +90,7 @@ function getTimeForTransaction(tindex,callbackf){
 		var full_date=("0"+date.getDate()).substr(-2)+"-"+("0"+(date.getMonth()+1)).substr(-2)+"-"+date.getFullYear()+" "+short_date;
 		transactions[tindex]["time"]=short_date;
 		transactions[tindex]["date"]=full_date;
+		transactions[tindex]["fulldate"]=date;
 		callbackf();
 	});
 }
@@ -113,25 +148,33 @@ function renderOrders(address){
 				buyhtml+="<tr ";
 			}else if(tmp_orders[i].getType()=="append"){
 				buyhtml+="<tr class='appear' ";
+				tmp_orders[i].setType("regular");
 			}else if(tmp_orders[i].getType()=="remove"){
 				buyhtml+="<tr class='disappear' ";
+				delete tmp_orders[i];
 			}
 			buyhtml+="id='id_"+tmp_orders[i].getHash()+"' onclick='setupOrderFill(\""+tmp_orders[i].getHash()+"\",\""+tmp_orders[i].getAmount()+"\")'><td class='price' title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td class='amount' title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td class='value' title='"+tmp_orders[i].getValue()+"'>"+toDecimals(tmp_orders[i].getValue())+"</td></tr>";
-			if(tmp_orders[i].owner==address){
-				orderhtml+="<tr><td title='"+tmp_orders[i].getTimestamp()+"'>"+tmp_orders[i].getTimestamp()+"</td><td class='buyclr'>buy</td><td title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td title='"+tmp_orders[i].getFilled()+"'>"+toDecimals(tmp_orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+tmp_orders[i].getHash()+"\")'>x</ccl></td></tr>"
-			}
+			
 		}else{
 			if(tmp_orders[i].getType()=="regular"){
 				sellhtml+="<tr ";
 			}else if(tmp_orders[i].getType()=="append"){
 				sellhtml+="<tr class='appear' ";
+				tmp_orders[i].setType("regular");
 			}else if(tmp_orders[i].getType()=="remove"){
 				sellhtml+="<tr class='disappear' ";
+				delete tmp_orders[i];
 			}
 			sellhtml+="id='id_"+tmp_orders[i].getHash()+"' onclick='setupOrderFill(\""+tmp_orders[i].getHash()+"\",\""+tmp_orders[i].getAmount()+"\")'><td class='price' title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td class='amount' title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td class='value' title='"+tmp_orders[i].getValue()+"'>"+toDecimals(tmp_orders[i].getValue())+"</td></tr>";
-			if(tmp_orders[i].owner==address){
-				orderhtml+="<tr><td title='"+tmp_orders[i].getTimestamp()+"'>"+tmp_orders[i].getTimestamp()+"</td><td class='sellclr'>sell</td><td title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td title='"+tmp_orders[i].getFilled()+"'>"+toDecimals(tmp_orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+tmp_orders[i].getHash()+"\")'>x</ccl></td></tr>"
-			}
+			
+		}
+	}
+	tmp_orders.sort(function(a, b) {
+		return b.compareDate(a);
+	});
+	for(var i=0;i<tmp_orders.length;i++){
+		if(tmp_orders[i].owner==address){
+			orderhtml+="<tr><td title='"+tmp_orders[i].getDatetime()+"'>"+tmp_orders[i].getDatetime()+"</td><td class='"+(tmp_orders[i].isBuyOrder()?"buyclr":"sellclr")+"'>buy</td><td title='"+tmp_orders[i].getPrice()+"'>"+toDecimals(tmp_orders[i].getPrice())+"</td><td title='"+tmp_orders[i].getAmount()+"'>"+toDecimals(tmp_orders[i].getAmount())+"</td><td title='"+tmp_orders[i].getFilled()+"'>"+toDecimals(tmp_orders[i].getFilled())+"</td><td><ccl onclick='tryCancelOrder(\""+tmp_orders[i].getHash()+"\")'>x</ccl></td></tr>"
 		}
 	}
 	generateDataBid();
@@ -258,7 +301,7 @@ function generateDataBid(){
 	for(key in orders){
 		var tmp={}
 		tmp.x=parseFloat(orders[key].getPrice());
-		tmp.y=parseFloat(orders[key].getAmount());
+		tmp.y=parseFloat(orders[key].getValue());
 		if(orders[key].isBuyOrder())data["dataBid"].push(tmp);
 		else data["dataAsk"].push(tmp);
 	}
@@ -419,6 +462,9 @@ function initGraph(container){
 			volume: +d.Volume
 		}
 	}).then(function(data){
+		//data=candles
+		console.log(data);
+		console.log(candles);
 		data=data.sort(function(a, b) { return d3.ascending(accessor.d(a), accessor.d(b)); });
 		x.domain(data.map(accessor.d));
 		cy.domain(techan.scale.plot.ohlc(data).domain());

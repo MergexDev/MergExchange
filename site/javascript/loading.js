@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	initGraph("graph");
+	//initGraph("graph");
 	PhaseZeroLoading();
 });
 
@@ -81,7 +81,7 @@ function PhaseOneLoading(){
 			}else if(jsonObj["action"] == 'place_order'){
 				closePopup();
 			}else if(jsonObj["action"] == 'add_order'){
-				appendOrder(jsonObj["order"]);
+				appendOrder(jsonObj["data"]);
 			}
 		};
 		webSocket.onclose = function(){

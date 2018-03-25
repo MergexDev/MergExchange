@@ -62,7 +62,7 @@ class Order{
 		this.signed = true;
 	}
 	setTimestamp(ts){
-		this.timestamp=ts;
+		this.timestamp=new Date(ts*1000);
 	}
 	isBuyOrder(){
 		if(this.tokenA==tokenB)return true;
@@ -142,7 +142,6 @@ class Order{
 		jsonObj["data"]["nonce"]=this.nonce;
 		jsonObj["data"]["signature"]=this.signature;
 		var jsonStr=JSON.stringify(jsonObj);
-		console.log("SENDING: "+jsonStr);
 		ws.send(jsonStr);
 	}
 	fillOrder(amount){
@@ -248,6 +247,10 @@ class Order{
 	getTimestamp(){
 		return this.timestamp;
 	}
+	getDatetime(){
+		var short_date=("0"+this.timestamp.getHours()).substr(-2)+":"+("0"+this.timestamp.getMinutes()).substr(-2)+":"+("0"+this.timestamp.getSeconds()).substr(-2);
+		return ("0"+this.timestamp.getDate()).substr(-2)+"-"+("0"+(this.timestamp.getMonth()+1)).substr(-2)+"-"+this.timestamp.getFullYear()+" "+short_date;
+	}
 	getAmount(){
 		if(this.amount==null){
 			var tmp_value_B=this.valueB-this.filled_B;
@@ -283,6 +286,11 @@ class Order{
 	}
 	comparePrice(order_b){
 		return compareStrInts(this.price_full,order_b.price_full);
+	}
+	compareDate(order_b){
+		if(this.timestamp.getTime() > order_b.timestamp.getTime())return 1;
+		else if(this.timestamp.getTime() === order_b.timestamp.getTime())return 0;
+		else return -1;
 	}
 }
 
@@ -504,7 +512,7 @@ function orderFromJson(jsonObj){
 	order.setSignature(jsonObj["signature"].v,jsonObj["signature"].s,jsonObj["signature"].r);
 	if(order.isBuyOrder())order.setPrice(jsonObj["priceB"]);
 	else order.setPrice(jsonObj["priceA"]);
-	order.setTimestamp(jsonObj["timestamp"]);
+	order.setTimestamp(parseInt(jsonObj["timestamp"]));
 	return order;
 }
 function parseOrders(jsonObj){

@@ -1,3 +1,10 @@
+var balanceUpdate=false;
+var ordersUpdate=false;
+var metaMask_provider=false;
+var metaMask_load=false;
+var myetherapi_load=false;
+var webSocked_load=false;
+
 $(document).ready(function() {
 	//initGraph("graph");
 	PhaseZeroLoading();
@@ -9,11 +16,14 @@ function tokensLoaded(){
 function isReadyOrders(){
 	return !ordersUpdate && isFullLoaded();
 }
+function isProviderAvailiable(){
+	return metaMask_load || myetherapi_load;
+}
 function isReadyBalance(){
-	return !balanceUpdate && metaMask_load && tokensLoaded();
+	return !balanceUpdate && isProviderAvailiable() && tokensLoaded();
 }
 function isFullLoaded(){
-	return metaMask_load && webSocked_load && currentBlock!=null && tokensLoaded();
+	return isProviderAvailiable() && webSocked_load && currentBlock!=null && tokensLoaded();
 }
 function balancesLoaded(){
 	return tokenA_symbol!=null && tokenB_symbol!=null && tokenA_decimals!=null && tokenB_decimals!=null && tokenA_balance!=null && tokenB_balance!=null;
@@ -98,31 +108,10 @@ function PhaseOneLoading(){
 function PhaseTwoLoading(){
 	if(typeof web3 !== 'undefined') {
 		console.log('Web3!');
+		metaMask_provider=true;
 		web3js = new Web3(web3.currentProvider);
-		if (web3.currentProvider.isMetaMask === true){
+		if (web3js.currentProvider.isMetaMask === true){
 			console.log("MetaMask!");
-			tokenA_contract = web3.eth.contract(erc20_abi).at(tokenA);
-			tokenB_contract = web3.eth.contract(erc20_abi).at(tokenB);
-			tokenA_contract.symbol(function(error, symbol){
-				tokenA_symbol=symbol;
-				finishPhaseTwoLoading();
-			});
-			tokenB_contract.symbol(function(error, symbol){
-				tokenB_symbol=symbol;
-				finishPhaseTwoLoading();
-			});
-			tokenA_contract.decimals(function(error, decimals){
-				tokenA_decimals=decimals;
-				finishPhaseTwoLoading();
-			});
-			tokenB_contract.decimals(function(error, decimals){
-				tokenB_decimals=decimals;
-				finishPhaseTwoLoading();
-			});
-			web3.eth.getBlockNumber(function(error,result){
-				currentBlock=result;
-				finishPhaseTwoLoading();
-			});
 			web3.version.getNetwork((err, netId) => {
 				switch (netId) {
 					case "1":
@@ -147,9 +136,10 @@ function PhaseTwoLoading(){
 			});
 			web3js.eth.getAccounts(function(error, accounts) {
 				if(accounts.length>0){
-					var meta="MetaMask: "+accounts[0].slice(0,12)+"...";
+					EtherAccount=accounts[0].toLowerCase();
+					var meta="MetaMask: "+EtherAccount.slice(0,12)+"...";
 					var slider="<div class='gasSlider'><input type='range' min='1' max='50' value='4' id='slider'></div>"
-					$(".account_data").html("<pf onclick='openLink(\"https://etherscan.io/address/"+accounts[0]+"\")' title='"+accounts[0]+"'>"+meta+"</pf><pf id='gasInfo'><text id='gasText'>GasPrice: 4 Gwei</text>"+slider+"</pf>");
+					$(".account_data").html("<pf onclick='openLink(\"https://ropsten.etherscan.io//address/"+EtherAccount+"\")' title='"+EtherAccount+"'>"+meta+"</pf><pf id='gasInfo'><text id='gasText'>GasPrice: 4 Gwei</text>"+slider+"</pf>");
 					$("#slider").on("input",function(){
 						$("#gasText").html("GasPrice: "+$("#slider").val()+" Gwei");
 					});
@@ -157,22 +147,59 @@ function PhaseTwoLoading(){
 						$("#slider").val(result["average"]/10);
 						$("#gasText").html("GasPrice: "+$("#slider").val()+" Gwei");
 					}});
-					EtherAccount=accounts[0];
 					metaMask_load=true;
+					setupInfo();
 					finishPhaseTwoLoading();
 				}else{
 					console.log("?!");
+					loadMyEtherApi();
 				}
 			});
 		}
 	} else {
 		console.log('No web3? You should consider trying MetaMask!');
+		loadMyEtherApi();
 	}
 }
-
+function setupInfo(){
+	tokenA_contract = new web3js.eth.Contract(erc20_abi, tokenA);
+	tokenB_contract = new web3js.eth.Contract(erc20_abi, tokenB);
+	tokenA_contract.methods.symbol().call(function(error, symbol){
+		tokenA_symbol=symbol;
+		finishPhaseTwoLoading();
+	});
+	tokenB_contract.methods.symbol().call(function(error, symbol){
+		tokenB_symbol=symbol;
+		finishPhaseTwoLoading();
+	});
+	tokenA_contract.methods.decimals().call(function(error, decimals){
+		tokenA_decimals=decimals;
+		finishPhaseTwoLoading();
+	});
+	tokenB_contract.methods.decimals().call(function(error, decimals){
+		tokenB_decimals=decimals;
+		finishPhaseTwoLoading();
+	});
+	web3js.eth.getBlockNumber(function(error,result){
+		currentBlock=result;
+		finishPhaseTwoLoading();
+	});
+}
+function loadMyEtherApi(){
+	EtherAccount="0x00000000000000000000000000000000";
+	web3js = new Web3();
+	web3js.setProvider(new Web3.providers.HttpProvider(''/*add rpc provider*/));
+	myetherapi_load=true;
+	setupInfo();
+	finishPhaseTwoLoading();
+}
 function PhaseThreeLoading(){
 	setupGraphs();
-	tradeLoadBuy();
+	if(metaMask_load){
+		tradeLoadBuy();
+	}else if(myetherapi_load){
+		tradeLoadTmp();
+	}
 	loadScrolls();
 }
 

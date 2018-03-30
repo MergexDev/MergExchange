@@ -24,14 +24,22 @@ function blocksToTime(blocks){
 	if(seconds>0)msg+=seconds+" seconds ";
 	return msg;
 }
-function showMessage(title,msg){
+function switchMessage(title,msg,btnText){
 	$(".popup").fadeOut(600,function(){
 		var pr='<div class="poptitle">'+title+'</div>';
 		pr+=msg;
-		pr+='<okbtn onclick="closePopup();">OK</okbtn>';
+		pr+='<okbtn onclick="closePopup();">'+btnText+'</okbtn>';
 		$(".popup").html(pr);
 		$(".popup").fadeIn(600);
 	});
+}
+function showMessage(title,msg,btnText){
+	var pr='<div class="poptitle">'+title+'</div>';
+	pr+=msg;
+	pr+='<okbtn onclick="closePopup();">'+btnText+'</okbtn>';
+	$(".popup").html(pr);
+	$(".screenshade").fadeIn(600);
+	$(".popup").fadeIn(600);
 }
 function confirmOrder(buy){
 	var price=$("input[name=price]").val();
@@ -91,14 +99,17 @@ function tryCancelOrder(hash){
 	$(".popup").fadeIn(600);
 }
 function setupCancelOrder(hash){
-	orders[hash].cancelOrder(function(){
-		closePopup();
-	});
+	orders[hash].cancelOrder();
 }
 function tryFillOrder(){
 	var hash=$("input[name=hash]").val();
 	var amount=$("input[name=amount]").val();
 	orders[hash].fillOrder(amount);
+}
+function closePopupWithCallback(callbackf){
+	$(".screenshade").fadeOut(600);
+	$(".popup").fadeOut(600);
+	setTimeout(callbackf, 700);
 }
 function closePopup(){
 	$(".screenshade").fadeOut(600);

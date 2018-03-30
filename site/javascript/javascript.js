@@ -1,18 +1,23 @@
 var MGraphData;
-var transactions
+var transactions=[]
 var candles;
 
-function loadHistory(trades){
-	transactions=[]
+function loadHistory(trades,initial=true){
+	var oldTransactions=transactions.length;
 	for(var i=trades.length-1;i>=Math.max(0, trades.length-100);i--){
-		var tA=trades[i].args.tokenA;
-		var tB=trades[i].args.tokenB;
+		var tA=trades[i].returnValues.tokenA.toLowerCase();
+		var tB=trades[i].returnValues.tokenB.toLowerCase();
 		if((tA!=tokenA&&tA!=tokenB)||(tB!=tokenA&&tB!=tokenB))continue;
-		var vA=fromScientificToStrint(JSON.stringify(trades[i].args.valueA).slice(1,-1));
-		var vB=fromScientificToStrint(JSON.stringify(trades[i].args.valueB).slice(1,-1));
+		var vA=fromScientificToStrint(JSON.stringify(trades[i].returnValues.valueA).slice(1,-1));
+		var vB=fromScientificToStrint(JSON.stringify(trades[i].returnValues.valueB).slice(1,-1));
 		var transaction={}
 		transaction["hash"]=trades[i].transactionHash;
 		transaction["block"]=trades[i].blockNumber;
+		if(initial){
+			transaction["prefix"]="regular";
+		}else{
+			transaction["prefix"]="appear";
+		}
 		if(tA==tokenA){
 			transaction["amount"]=removeDecimals(vB,tokenB_decimals);
 			transaction["price_full"]=str_div(addDecimals(vA,tokenB_decimals),vB);
@@ -24,19 +29,32 @@ function loadHistory(trades){
 			transaction["price"]=removeDecimals(transaction["price_full"],tokenA_decimals);
 			transaction["type"]="sell";
 		}
-		transactions.push(transaction);
+		if(initial){
+			transactions.push(transaction);
+		}else{
+			transactions.unshift(transaction);
+		}
 	}
-	var history_count=transactions.length;
+	var history_count=transactions.length-oldTransactions;
+	if(!initial){
+		console.log(history_count);
+		console.log(oldTransactions);
+		console.log(transactions.length);
+	}
 	var history_processed=0;
 	var check_callback=function(){
 		history_processed++;
 		if(history_processed==history_count){
+			console.log("triggered!");
 			createHistoryGraph();
 			finishLoadingHistory();
-			initGraph("graph");
+			if(initial){
+				initGraph("graph");
+			}
 		}
 	}
-	for(var i=0;i<transactions.length;i++){
+	for(var i=0;i<history_count;i++){
+		console.log(transactions[i]);
 		getTimeForTransaction(i,check_callback);
 	}
 }
@@ -74,16 +92,31 @@ function finishLoadingHistory(){
 	var shtml="";
 	for(var i=0;i<transactions.length;i++){
 		if(transactions[i]["type"]=="buy"){
-			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='bprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
+			if(transactions[i]["prefix"]=="regular"){
+				shtml+="<tr ";
+			}else if(transactions[i]["prefix"]=="appear"){
+				shtml+="<tr class='appear' ";
+				transactions[i]["prefix"]="regular";
+			}
+			shtml+="onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='bprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
 		}else{
-			shtml+="<tr onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='sprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
+			if(transactions[i]["prefix"]=="regular"){
+				shtml+="<tr ";
+			}else if(transactions[i]["prefix"]=="appear"){
+				shtml+="<tr class='appear' ";
+				transactions[i]["prefix"]="regular";
+			}
+			shtml+="onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[i]["hash"]+"\")'><td class='recent' title='"+transactions[i]["date"]+"'>"+transactions[i]["time"]+"</td><td class='value' title='"+transactions[i]["amount"]+"'>"+toDecimals(transactions[i]["amount"])+"</td><td class='sprice' title='"+transactions[i]["price"]+"'>"+toDecimals(transactions[i]["price"])+"</td></tr>";
 		}
 	}
 	$("#history_data").html(shtml);
+	setTimeout(function(){
+		$("#history_data tr.appear").removeClass("appear");
+	},100);
 }
 
 function getTimeForTransaction(tindex,callbackf){
-	web3.eth.getBlock(transactions[tindex]["block"],function(error, result){
+	web3js.eth.getBlock(transactions[tindex]["block"],function(error, result){
 		if(error)return;
 		var date=new Date(result["timestamp"]*1000);
 		var short_date=("0"+date.getHours()).substr(-2)+":"+("0"+date.getMinutes()).substr(-2)+":"+("0"+date.getSeconds()).substr(-2);
@@ -92,40 +125,6 @@ function getTimeForTransaction(tindex,callbackf){
 		transactions[tindex]["date"]=full_date;
 		transactions[tindex]["fulldate"]=date;
 		callbackf();
-	});
-}
-
-function appendHistory(trade){
-	var tA=trade.args.tokenA;
-	var tB=trade.args.tokenB;
-	if((tA!=tokenA&&tA!=tokenB)||(tB!=tokenA&&tB!=tokenB))return;
-	var vA=fromScientificToStrint(JSON.stringify(trade.args.valueA).slice(1,-1));
-	var vB=fromScientificToStrint(JSON.stringify(trade.args.valueB).slice(1,-1));
-	var transaction={}
-	transaction["hash"]=trade.transactionHash;
-	transaction["block"]=trade.blockNumber;
-	if(tA==tokenA){
-		transaction["amount"]=removeDecimals(vB,tokenB_decimals);
-		transaction["price"]=removeDecimals(str_div(addDecimals(vA,tokenB_decimals),vB),tokenA_decimals);
-		transaction["type"]="buy";
-	}else{
-		transaction["amount"]=removeDecimals(vA,tokenB_decimals);
-		transaction["price"]=removeDecimals(str_div(addDecimals(vB,tokenB_decimals),vA),tokenA_decimals);
-		transaction["type"]="sell";
-	}
-	transactions.push(transaction);
-	var lastTransaction=transactions.length-1;
-	getTimeForTransaction(lastTransaction,function(){
-		if(transactions[lastTransaction]["type"]=="buy"){
-			var shtml="<tr class='appear' onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='bprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
-		}else{
-			var shtml="<tr class='appear' onclick='openLink(\"https://ropsten.etherscan.io/tx/"+transactions[lastTransaction]["hash"]+"\")'><td class='recent' title='"+transactions[lastTransaction]["date"]+"'>"+transactions[lastTransaction]["time"]+"</td><td class='value' title='"+transactions[lastTransaction]["amount"]+"'>"+toDecimals(transactions[lastTransaction]["amount"])+"</td><td class='sprice' title='"+transactions[lastTransaction]["price"]+"'>"+toDecimals(transactions[lastTransaction]["price"])+"</td></tr>";
-		}
-		console.log(shtml);
-		$("#history_data").prepend(shtml);
-		setTimeout(function(){
-			$(".historycontent tr.appear").removeClass("appear");
-		},100);
 	});
 }
 
@@ -202,6 +201,12 @@ function setupOrderFill(hash, amount){
 	tradeLoadFill();
 	$('input[name=hash]').val(hash);
 	$('input[name=amount]').val(amount);
+}
+
+function tradeLoadTmp(){
+	var cont="<div class='placetitle'>TRADE</div>";
+	cont+="<div class='temp_text'><centered>Please login into your metamask wallet to use exchange.</centered></div>"
+	$(".place").html(cont);
 }
 
 function tradeLoadBuy(){
@@ -600,11 +605,17 @@ function loadScrolls(){
 	});
 }
 function loadPriceStatus(){
-	var decimalBalanceA=removeDecimals(tokenA_balance,tokenA_decimals);
-	var decimalBalanceB=removeDecimals(tokenB_balance,tokenB_decimals);
-	var cont="<div class='infotitle'>INFO</div>";
-	cont+="<div class='infoline'>"+tokenA_symbol+" balance:<right title='"+decimalBalanceA+"'>"+toDecimals(decimalBalanceA)+"</right></div>";
-	cont+="<div class='infoline'>"+tokenB_symbol+" balance:<right title='"+decimalBalanceB+"'>"+toDecimals(decimalBalanceB)+"</right></div>";
+	if(metaMask_load){
+		var decimalBalanceA=removeDecimals(tokenA_balance,tokenA_decimals);
+		var decimalBalanceB=removeDecimals(tokenB_balance,tokenB_decimals);
+		var cont="<div class='infotitle'>INFO</div>";
+		cont+="<div class='infoline'>"+tokenA_symbol+" balance:<right title='"+decimalBalanceA+"'>"+toDecimals(decimalBalanceA)+"</right></div>";
+		cont+="<div class='infoline'>"+tokenB_symbol+" balance:<right title='"+decimalBalanceB+"'>"+toDecimals(decimalBalanceB)+"</right></div>";
+	}else if(myetherapi_load){
+		var cont="<div class='infotitle'>INFO</div>";
+		cont+="<div class='infoline'>"+tokenA_symbol+" balance:<right title='0.00000000'>0.00000000</right></div>";
+		cont+="<div class='infoline'>"+tokenB_symbol+" balance:<right title='0.00000000'>0.00000000</right></div>";
+	}
 	$(".orderstatus").html(cont);
 }
 function loadInfo(){

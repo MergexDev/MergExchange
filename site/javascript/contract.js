@@ -7,10 +7,6 @@ var mergex_abi=[ { "constant": false, "inputs": [ { "name": "_admin", "type": "a
 var exchangeAddress="0x14f6650b4544ACCe642699baA305998AB393c83D";
 var exchange_contract;
 
-var balanceUpdate=false;
-var ordersUpdate=false;
-var metaMask_load=false;
-var webSocked_load=false;
 var local_nonce="0"
 var webSocket;
 var EtherAccount;
@@ -26,6 +22,9 @@ var tokenA_balance;
 var tokenB_balance;
 var currentBlock;
 var orders;
+var latestBlock;
+var cancelUpdateBlock;
+var filledUpdateBlock;
 
 class Order{
 	constructor(_owner, _tokenA, _tokenB, _valueA, _valueB, _expire, _nonce) {
@@ -81,7 +80,7 @@ class Order{
 			else _this.signature.v=27;
 			callbackf();
 		});*/
-		web3js.personal.sign(hash, account, function(error, result){
+		web3js.eth.personal.sign(hash, account, function(error, result){
 			console.log("res: "+result);
 			_this.signature={};
 			_this.signature.r = result.slice(0, 66);
@@ -97,12 +96,12 @@ class Order{
 		if(this.signed){
 			var _this=this;
 			if(this.isBuyOrder()){
-				tokenA_contract.allowance(this.owner, exchangeAddress, function(error, result){
+				tokenA_contract.methods.allowance(this.owner, exchangeAddress).call(function(error, result){
 					if(error)return;
 					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 					console.log("allow: "+owner_allowance);
 					if(!isBiggerOrEqual(owner_allowance,_this.valueB)){
-						tokenA_contract.approve(exchangeAddress, _this.valueB, { gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
+						tokenA_contract.methods.approve(exchangeAddress, _this.valueB).send({from: EtherAccount, gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
 							if(error)return;
 							_this.finishSendingOrder(ws);
 						});
@@ -111,12 +110,12 @@ class Order{
 					}
 				});
 			}else{
-				tokenB_contract.allowance(this.owner, exchangeAddress, function(error, result){
+				tokenB_contract.methods.allowance(this.owner, exchangeAddress).call(function(error, result){
 					if(error)return;
 					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 					console.log("allow: "+owner_allowance);
 					if(!isBiggerOrEqual(owner_allowance,_this.valueB)){
-						tokenB_contract.approve(exchangeAddress, _this.valueB, { gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
+						tokenB_contract.methods.approve(exchangeAddress, _this.valueB).send({from: EtherAccount, gasPrice: addDecimals($("#slider").val(),9) }, function(error, result){
 							if(error)return;
 							_this.finishSendingOrder(ws);
 						});
@@ -168,36 +167,36 @@ class Order{
 				var amountA=str_div(str_mul(this.valueA,amountB),this.valueB);
 			}
 			var _this=this;
-			orderB_contract.balanceOf(_this.owner, function(error, result){
+			orderB_contract.methods.balanceOf(_this.owner).call(function(error, result){
 				if(error)return;
 				var owner_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 				if(!isBiggerOrEqual(owner_balance,amountB)){
 					console.log("owner does not have funds for order!");
-					showMessage("Trade error.","Order owner does not have enough funds for this transaction!");
+					switchMessage("Trade error.","Order owner does not have enough funds for this transaction!","OK");
 					return;
 				}
-				orderB_contract.allowance(_this.owner, exchangeAddress, function(error,result){
+				orderB_contract.methods.allowance(_this.owner, exchangeAddress).call(function(error,result){
 					if(error)return;
 					var owner_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 					if(!isBiggerOrEqual(owner_allowance,amountB)){
 						console.log("owner does not have allowance for order!");
-						showMessage("Trade error.","Order owner does not have enough allowance for this transaction!");
+						switchMessage("Trade error.","Order owner does not have enough allowance for this transaction!","OK");
 						return;
 					}
-					orderA_contract.balanceOf(EtherAccount, function(error,result){
+					orderA_contract.methods.balanceOf(EtherAccount).call(function(error,result){
 						if(error)return;
 						var user_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 						if(!isBiggerOrEqual(user_balance,amountA)){
 							console.log("User does not have funds to fill the order!");
-							showMessage("Trade error.","Not enough funds to complete this trade!");
+							switchMessage("Trade error.","Not enough funds to complete this trade!","OK");
 							return;
 						}
-						orderA_contract.allowance(EtherAccount, exchangeAddress, function(error,result){
+						orderA_contract.methods.allowance(EtherAccount, exchangeAddress).call(function(error,result){
 							if(error)return;
 							var user_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 							console.log(user_allowance);
 							if(!isBiggerOrEqual(user_allowance,amountA)){
-								orderA_contract.approve(exchangeAddress, user_balance, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+								orderA_contract.methods.approve(exchangeAddress, user_balance).send({from: EtherAccount, gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
 									if(error)return;
 									_this.fillOrderFinal(amountA);
 								});
@@ -211,14 +210,19 @@ class Order{
 		}
 	}
 	fillOrderFinal(amount){
-		exchange_contract.fillOrder(this.owner, this.tokenA, this.tokenB, amount, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
-			closePopup();
+		exchange_contract.methods.fillOrder(this.owner, this.tokenA, this.tokenB, amount, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s).send({from: EtherAccount, gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+			console.log("approve:"+result);
+			closePopupWithCallback(function(){
+				showMessage("Progress.","Track your transaction progress:<br><br><href onclick='openLink(\"https://ropsten.etherscan.io/tx/"+result+"\")'>"+result+"</href>","Close");
+			});
 			if(error)return;
 		});
 	}
-	cancelOrder(callbackf){
-		exchange_contract.cancelOrder(this.tokenA, this.tokenB, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s, { gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
-			callbackf();
+	cancelOrder(){
+		exchange_contract.methods.cancelOrder(this.tokenA, this.tokenB, this.valueA, this.valueB, this.expire, this.nonce, this.signature.v.toString(), this.signature.r, this.signature.s).send({from: EtherAccount, gasPrice: addDecimals($("#slider").val(),9) }, function(error,result){
+			closePopupWithCallback(function(){
+				showMessage("Progress.","Track your transaction progress:<br><br><href onclick='openLink(\"https://ropsten.etherscan.io/tx/"+result+"\")'>"+result+"</href>","Close");
+			});
 			if(error)return;
 			console.log("approve:"+result);
 		});
@@ -295,14 +299,41 @@ class Order{
 }
 
 function setupExchange(){
-	exchange_contract = web3.eth.contract(mergex_abi).at(exchangeAddress);
-	exchange_contract.Trade({},{ fromBlock: 0, toBlock: 'latest' }).get(function(error, result){
+	exchange_contract = new web3js.eth.Contract(mergex_abi, exchangeAddress);
+	exchange_contract.getPastEvents("Trade",{ fromBlock: 0, toBlock: 'latest' },function(error, result){
 		if(error)return;
-		loadHistory(result);
+		if(result.length>0){
+			latestBlock=result[result.length-1].blockNumber+1;
+			loadHistory(result);
+		}
 	});
-	exchange_contract.Trade().watch(function(error, result){
-		if(error)return;
-		appendHistory(result);
+	web3js.eth.getBlockNumber(function(error, result){
+		console.log(result);
+		cancelUpdateBlock=result;
+		filledUpdateBlock=result;
+		setInterval(function(){
+			exchange_contract.getPastEvents("Trade",{ fromBlock: latestBlock, toBlock: 'latest' },function(error, result){
+				if(error)return;
+				if(result.length>0){
+					console.log(result);
+					latestBlock=result[result.length-1].blockNumber+1;
+					loadHistory(result,initial=false);
+				}
+			});
+			/*
+			exchange_contract.getPastEvents("Filled",{ fromBlock: filledUpdateBlock, toBlock: 'latest' },function(error, result){
+				if(error)return;
+				if(result.length>0){
+					filledUpdateBlock=result[result.length-1].blockNumber+1;
+				}
+			});
+			exchange_contract.getPastEvents("Cancel",{ fromBlock: cancelUpdateBlock, toBlock: 'latest' },function(error, result){
+				if(error)return;
+				if(result.length>0){
+					cancelUpdateBlock=result[result.length-1].blockNumber+1;
+				}
+			});*/
+		},10000);
 	});
 }
 
@@ -454,9 +485,9 @@ function calculateValue(amount, price, decimals){
 }
 
 function createBuyOrder(price, amount){
-	if(metaMask_load && webSocked_load){
+	if(isProviderAvailiable() && webSocked_load){
 		var exp=$("#blk_input").val();
-		web3.eth.getBlockNumber(function(error, block) {
+		web3js.eth.getBlockNumber(function(error, block) {
 			exp = str_add(block, exp);
 			var valueA = calculateValue(amount, price, tokenA_decimals);
 			var valueB = addDecimals(amount, tokenB_decimals);
@@ -471,9 +502,9 @@ function createBuyOrder(price, amount){
 	return false;
 }
 function createSellOrder(price, amount){
-	if(metaMask_load && webSocked_load){
+	if(isProviderAvailiable() && webSocked_load){
 		var exp=$("#blk_input").val();
-		web3.eth.getBlockNumber(function(error, block) {
+		web3js.eth.getBlockNumber(function(error, block) {
 			exp = str_add(block, exp);
 			var valueA = addDecimals(amount, tokenB_decimals);
 			var valueB = calculateValue(amount, price, tokenA_decimals);
@@ -490,22 +521,29 @@ function createSellOrder(price, amount){
 function updateBalances(account){
 	var aFinished=false;
 	var bFinished=false;
-	tokenA_contract.balanceOf(account, function(error,result){
-		tokenA_balance=JSON.stringify(result);
-		tokenA_balance=fromScientificToStrint(tokenA_balance.slice(1,-1));
-		aFinished=true;
-		if(bFinished){
-			loadInfo();
-		}
-	});
-	tokenB_contract.balanceOf(account, function(error,result){
-		tokenB_balance=JSON.stringify(result);
-		tokenB_balance=fromScientificToStrint(tokenB_balance.slice(1,-1));
-		bFinished=true;
-		if(aFinished){
-			loadInfo();
-		}
-	});
+	console.log("test_03");
+	if(myetherapi_load){
+		tokenA_balance="0";
+		tokenB_balance="0";
+		loadInfo();
+	}else{
+		tokenA_contract.methods.balanceOf(account).call(function(error,result){
+			tokenA_balance=JSON.stringify(result);
+			tokenA_balance=fromScientificToStrint(tokenA_balance.slice(1,-1));
+			aFinished=true;
+			if(bFinished){
+				loadInfo();
+			}
+		});
+		tokenB_contract.methods.balanceOf(account).call(function(error,result){
+			tokenB_balance=JSON.stringify(result);
+			tokenB_balance=fromScientificToStrint(tokenB_balance.slice(1,-1));
+			bFinished=true;
+			if(aFinished){
+				loadInfo();
+			}
+		});
+	}
 }
 function orderFromJson(jsonObj){
 	var order = new Order(jsonObj["owner"],jsonObj["tokenA"],jsonObj["tokenB"],jsonObj["valueA"],jsonObj["valueB"],jsonObj["expiration"],jsonObj["nonce"]);
@@ -572,17 +610,17 @@ function startParsingOrder(orderJson,callbackf){
 	}else{
 		order_contract=tokenA_contract;
 	}
-	exchange_contract.fills(order.owner,order.getHash(),function(error,result){
+	exchange_contract.methods.fills(order.owner,order.getHash()).call(function(error,result){
 		var amountFilled=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setFilled(amountFilled);
 		callbackf(order.getHash());
 	});
-	order_contract.balanceOf(order.owner, function(error,result){
+	order_contract.methods.balanceOf(order.owner).call(function(error,result){
 		var tmp_balance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setOwnerBalance(tmp_balance);
 		callbackf(order.getHash());
 	});
-	order_contract.allowance(order.owner, exchangeAddress, function(error,result){
+	order_contract.methods.allowance(order.owner, exchangeAddress).call(function(error,result){
 		var tmp_allowance=fromScientificToStrint(JSON.stringify(result).slice(1,-1));
 		order.setOwnerAllowance(tmp_allowance);
 		callbackf(order.getHash());

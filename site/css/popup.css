@@ -11,6 +11,13 @@
 .wrapper{
 	z-index:5;
 }
+.popup href{
+	color: #55bfff;
+	cursor: pointer;
+}
+.popup href:hover{
+	text-decoration: underline;
+}
 .popup{
 	display:none;
 	float:left;
